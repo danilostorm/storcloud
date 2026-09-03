@@ -42,6 +42,26 @@ def test_full_control_plane_smoke():
         assert rom_file.status_code == 200
         assert rom_file.content.startswith(b"NES\x1a")
 
+        retro_session = client.post(
+            "/activity/start",
+            json={
+                "mode": "retro-wasm",
+                "game_key": f"rom-{rom_id}",
+                "title": "CI Homebrew",
+                "platform_id": "nes",
+            },
+        )
+        assert retro_session.status_code == 200, retro_session.text
+        retro_session_id = retro_session.json()["session"]["id"]
+        assert client.post(f"/activity/{retro_session_id}/heartbeat").status_code == 200
+        assert client.post(f"/activity/{retro_session_id}/end").status_code == 200
+        summary = client.get("/activity/summary")
+        assert summary.status_code == 200
+        assert summary.json()["sessions"] >= 1
+        continuing = client.get("/activity/continue")
+        assert continuing.status_code == 200
+        assert continuing.json()["items"][0]["launch_url"] == f"/retro/?rom={rom_id}"
+
         pair_ticket = client.post("/devices/pair-ticket", json={})
         assert pair_ticket.status_code == 200
         pair = client.post(
@@ -57,18 +77,29 @@ def test_full_control_plane_smoke():
         assert pair.status_code == 200, pair.text
         device_id = pair.json()["device_id"]
         device_token = pair.json()["device_token"]
+        auth = {"Authorization": f"Bearer {device_token}"}
 
-        heartbeat = client.post("/agent/heartbeat", headers={"Authorization": f"Bearer {device_token}"})
+        heartbeat = client.post("/agent/heartbeat", headers=auth)
         assert heartbeat.status_code == 200
 
         launch_ticket = client.post(f"/devices/{device_id}/launch-ticket", json={"game_id": "test-game"})
         assert launch_ticket.status_code == 200
         consume = client.post(
             "/agent/launch/consume",
-            headers={"Authorization": f"Bearer {device_token}"},
+            headers=auth,
             json={"ticket": launch_ticket.json()["ticket"], "game_id": "test-game"},
         )
         assert consume.status_code == 200
+
+        native_session = client.post(
+            "/agent/activity/start",
+            headers=auth,
+            json={"game_id": "test-game", "title": "CI Native Game"},
+        )
+        assert native_session.status_code == 200, native_session.text
+        native_session_id = native_session.json()["session_id"]
+        assert client.post(f"/agent/activity/{native_session_id}/heartbeat", headers=auth).status_code == 200
+        assert client.post(f"/agent/activity/{native_session_id}/end", headers=auth).status_code == 200
 
         save = client.post(
             "/saves/test-game/auto",
@@ -84,6 +115,21 @@ def test_full_control_plane_smoke():
         devices = client.get("/devices")
         assert devices.status_code == 200
         assert any(item["id"] == device_id for item in devices.json()["items"])
+
+        achievements = client.get("/achievements")
+        assert achievements.status_code == 200, achievements.text
+        unlocked = {item["id"] for item in achievements.json()["items"] if item["unlocked"]}
+        assert "first-launch" in unlocked
+        assert "paired-device" in unlocked
+        assert "local-pc" in unlocked
+
+        admin_overview = client.get("/admin/overview")
+        assert admin_overview.status_code == 200, admin_overview.text
+        assert admin_overview.json()["users"] == 1
+        assert admin_overview.json()["roms"] == 1
+        assert admin_overview.json()["sessions"] >= 2
+        assert client.get("/admin/users/detail").status_code == 200
+        assert client.get("/admin/activity").status_code == 200
 
         logout = client.post("/auth/logout", json={})
         assert logout.status_code == 200
