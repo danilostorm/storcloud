@@ -18,7 +18,7 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./frontend:/usr/share/nginx/html:ro
+      - ./frontend:/srv/storcloud/frontend:ro
+      - ./runtime/games:/srv/storcloud/games:ro
+      - ./runtime/retro:/srv/storcloud/retro:ro
       - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./runtime/games:/usr/share/nginx/html/games:ro
-      - ./runtime/retro:/usr/share/nginx/html/retro/engines:ro
