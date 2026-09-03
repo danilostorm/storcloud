@@ -30,6 +30,21 @@ def test_full_control_plane_smoke():
         assert me.status_code == 200
         assert me.json()["user"]["username"] == "admin"
 
+        catalog = client.get("/catalog")
+        assert catalog.status_code == 200, catalog.text
+        assert catalog.json()["count"] >= 3
+        resolved = client.post(
+            "/catalog/doom-wasm/resolve",
+            json={"wasm": True, "webgpu": False, "local_agent": False, "remote_stream": False},
+        )
+        assert resolved.status_code == 200, resolved.text
+        assert resolved.json()["decision"]["mode"] == "browser-wasm"
+
+        streaming = client.get("/streaming/status")
+        assert streaming.status_code == 200
+        assert streaming.json()["configured"] is False
+        assert client.get("/streaming/doom-wasm/descriptor").status_code == 503
+
         rom = client.post(
             "/library/roms",
             data={"platform_id": "nes", "title": "CI Homebrew"},
