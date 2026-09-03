@@ -31,22 +31,34 @@ jobs:
           test -f frontend/index.html
           test -f frontend/catalog/index.html
           test -f frontend/library/index.html
-          test -f frontend/assets/storcloud.css
+          test -f frontend/account/index.html
+          test -f frontend/assets/console.css
+          test -f frontend/assets/spatial-nav.js
           grep -q 'healthz' frontend/index.html
+          grep -q 'claim-admin' frontend/account/index.html
+          grep -q 'scanAll' frontend/library/index.html
           grep -q 'resolver 127.0.0.11' frontend/nginx.conf
           grep -q '8080/api/healthz' update.sh
       - name: Validate launcher JavaScript syntax
         run: |
+          node --check frontend/assets/spatial-nav.js
           python3 - <<'PY'
           from pathlib import Path
           import re, subprocess
-          pages = [Path('frontend/index.html'), Path('frontend/catalog/index.html'), Path('frontend/library/index.html')]
+          pages = [
+              Path('frontend/index.html'),
+              Path('frontend/catalog/index.html'),
+              Path('frontend/library/index.html'),
+              Path('frontend/account/index.html'),
+          ]
           for page in pages:
               html = page.read_text(encoding='utf-8')
               blocks = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', html, flags=re.S | re.I)
               if not blocks:
                   raise SystemExit(f'no script found in {page}')
               for index, code in enumerate(blocks):
+                  if not code.strip():
+                      continue
                   target = Path('/tmp') / f'{page.parent.name or "home"}-{index}.js'
                   target.write_text(code, encoding='utf-8')
                   subprocess.run(['node', '--check', str(target)], check=True)
