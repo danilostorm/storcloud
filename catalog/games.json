@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "games": [
+    {
+      "id": "doom-wasm",
+      "title": "Doom / FreeDoom WASM",
+      "category": "pc",
+      "description": "Browser-native WebAssembly package. Rendering happens on the player's device.",
+      "routes": [
+        {
+          "mode": "browser-wasm",
+          "priority": 100,
+          "launch_url": "/games/doom-wasm/",
+          "requires": ["wasm"]
+        },
+        {
+          "mode": "remote-stream",
+          "priority": 10,
+          "stream_app_id": "doom",
+          "requires": ["remote_stream"]
+        }
+      ]
+    },
+    {
+      "id": "retro-library",
+      "title": "Retro Library",
+      "category": "retro",
+      "description": "Unified RetroArch WASM player and personal ROM library.",
+      "routes": [
+        {
+          "mode": "retro-wasm",
+          "priority": 100,
+          "launch_url": "/library/",
+          "requires": ["wasm"]
+        }
+      ]
+    },
+    {
+      "id": "pc-local-library",
+      "title": "PC Local Library",
+      "category": "pc",
+      "description": "User-owned Windows/Linux installs launched by the paired Local Agent.",
+      "routes": [
+        {
+          "mode": "local-native",
+          "priority": 100,
+          "launch_url": "/pc/",
+          "requires": ["local_agent"]
+        },
+        {
+          "mode": "remote-stream",
+          "priority": 10,
+          "stream_app_id": "desktop",
+          "requires": ["remote_stream"]
+        }
+      ]
+    },
+    {
+      "id": "quake-wasm",
+      "title": "Quake WASM",
+      "category": "pc",
+      "description": "Reserved manifest for the browser Quake integration track.",
+      "status": "planned",
+      "routes": [
+        {
+          "mode": "browser-wasm",
+          "priority": 100,
+          "launch_url": "/games/quake-wasm/",
+          "requires": ["wasm", "package:quake-wasm"]
+        },
+        {
+          "mode": "local-native",
+          "priority": 50,
+          "agent_game_id": "quake",
+          "launch_url": "/pc/",
+          "requires": ["local_agent"]
+        },
+        {
+          "mode": "remote-stream",
+          "priority": 10,
+          "stream_app_id": "quake",
+          "requires": ["remote_stream"]
+        }
+      ]
+    }
+  ]
+}
