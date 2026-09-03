@@ -6,28 +6,26 @@
   <title>StorCloud</title>
   <style>
     :root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#080b14;color:#f7f8ff}
-    *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at top,#18213d 0,#080b14 44%);min-height:100vh}
-    header{padding:28px 5vw;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ffffff14}
-    .brand{font-weight:800;font-size:1.4rem;letter-spacing:.3px}.badge{font-size:.75rem;padding:6px 10px;border:1px solid #6d7fff66;border-radius:999px;color:#b8c0ff}
-    main{padding:52px 5vw;max-width:1400px;margin:auto}.hero{max-width:860px;margin-bottom:42px}.hero h1{font-size:clamp(2.3rem,6vw,5.8rem);line-height:.92;margin:0 0 18px}.hero p{color:#a8aec4;font-size:1.05rem;line-height:1.7}
-    .status{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.pill{background:#ffffff0b;border:1px solid #ffffff14;border-radius:12px;padding:9px 12px;color:#cbd0e5}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}.card{min-height:255px;background:linear-gradient(145deg,#141a2c,#0e1220);border:1px solid #ffffff14;border-radius:20px;padding:22px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 18px 60px #0005}.card h3{margin:8px 0 8px;font-size:1.25rem}.meta{color:#8991ac;font-size:.9rem;line-height:1.55}.description{color:#b4b9cc;font-size:.9rem;line-height:1.5;margin-top:12px}.state{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:#9aa6ff}.ready{color:#7fffc4}.btn{display:block;text-align:center;text-decoration:none;margin-top:18px;border:0;border-radius:12px;padding:12px 14px;font-weight:700;background:#6675ff;color:#fff;cursor:pointer}.btn.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}.error{color:#ff9f9f}.note{margin-top:34px;padding:18px;border-radius:16px;background:#ffffff08;border:1px solid #ffffff10;color:#aeb5ca;line-height:1.6}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#18213d 0,#080b14 44%);min-height:100vh}
+    header{padding:28px 5vw;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ffffff14}.brand{font-weight:800;font-size:1.4rem;letter-spacing:.3px}.badge{font-size:.75rem;padding:6px 10px;border:1px solid #6d7fff66;border-radius:999px;color:#b8c0ff}
+    main{padding:52px 5vw;max-width:1400px;margin:auto}.hero{max-width:900px;margin-bottom:42px}.hero h1{font-size:clamp(2.3rem,6vw,5.8rem);line-height:.92;margin:0 0 18px}.hero p{color:#a8aec4;font-size:1.05rem;line-height:1.7}
+    .status{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.pill{background:#ffffff0b;border:1px solid #ffffff14;border-radius:12px;padding:9px 12px;color:#cbd0e5}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}.card{min-height:270px;background:linear-gradient(145deg,#141a2c,#0e1220);border:1px solid #ffffff14;border-radius:20px;padding:22px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 18px 60px #0005}.card h3{margin:8px 0 8px;font-size:1.25rem}.meta{color:#8991ac;font-size:.9rem;line-height:1.55}.description{color:#b4b9cc;font-size:.9rem;line-height:1.5;margin-top:12px}.state{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:#9aa6ff}.ready{color:#7fffc4}.alpha{color:#ffd27a}.btn{display:block;text-align:center;text-decoration:none;margin-top:18px;border:0;border-radius:12px;padding:12px 14px;font-weight:700;background:#6675ff;color:#fff;cursor:pointer}.btn.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}.error{color:#ff9f9f}.note{margin-top:34px;padding:18px;border-radius:16px;background:#ffffff08;border:1px solid #ffffff10;color:#aeb5ca;line-height:1.6}
   </style>
 </head>
 <body>
-  <header><div class="brand">StorCloud</div><div class="badge">v0.3 Retro Hub</div></header>
-  <main>
-    <section class="hero">
-      <h1>Jogue onde o jogo roda melhor.</h1>
-      <p>WebAssembly e emuladores executam no dispositivo do jogador, usando CPU/GPU local. O servidor organiza biblioteca, usuários, saves e entrega dos arquivos. Streaming fica como fallback para jogos que realmente precisarem dele.</p>
-      <div class="status" id="status"><span class="pill">API: verificando…</span></div>
-    </section>
-    <section class="grid" id="games"><article class="card"><div><span class="state">carregando</span><h3>Catálogo</h3><p class="meta">Buscando jogos da API…</p></div></article></section>
-    <div class="note">Os jogos WASM e o núcleo Retro são renderizados no dispositivo do usuário. O StorCloud não precisa de GPU no servidor para esses modos.</div>
-  </main>
+<header><div class="brand">StorCloud</div><div class="badge">v0.5 Local First</div></header>
+<main>
+  <section class="hero">
+    <h1>Jogue onde o jogo roda melhor.</h1>
+    <p>O StorCloud tenta primeiro executar no dispositivo do jogador: WebAssembly/WebGPU no navegador, Retro em um player único ou jogos PC pelo Local Agent. Streaming remoto só entra quando nenhuma rota local é viável.</p>
+    <div class="status" id="status"><span class="pill">API: verificando…</span></div>
+  </section>
+  <section class="grid" id="games"><article class="card"><div><span class="state">carregando</span><h3>Catálogo</h3><p class="meta">Buscando modos da API…</p></div></article></section>
+  <div class="note">Browser WASM, Retro WASM e PC Local usam CPU/GPU do jogador. A GPU do servidor não é necessária nesses modos.</div>
+</main>
 <script>
 const api='/api';
-const labels={ready:'pronto',installing:'instalando',planned:'planejado',research:'pesquisa',experimental:'experimental'};
+const labels={ready:'pronto',installing:'instalando',alpha:'alpha',planned:'planejado',research:'pesquisa','active-track':'em desenvolvimento',fallback:'fallback'};
 async function load(){
   const status=document.getElementById('status');
   const grid=document.getElementById('games');
@@ -35,10 +33,11 @@ async function load(){
   const wasm=typeof WebAssembly==='object';
   try{
     const [health,games]=await Promise.all([fetch(api+'/healthz').then(r=>r.json()),fetch(api+'/games').then(r=>r.json())]);
-    status.innerHTML=`<span class="pill">API: ${health.ok?'online':'erro'}</span><span class="pill">WebAssembly: ${wasm?'sim':'não'}</span><span class="pill">WebGPU: ${webgpu?'sim':'não'}</span><span class="pill">Render: dispositivo local</span>`;
+    status.innerHTML=`<span class="pill">API: ${health.ok?'online':'erro'}</span><span class="pill">WebAssembly: ${wasm?'sim':'não'}</span><span class="pill">WebGPU: ${webgpu?'sim':'não'}</span><span class="pill">Estratégia: local-first</span>`;
     grid.innerHTML=games.items.map(g=>{
-      const ready=g.status==='ready' && g.launch_url;
-      return `<article class="card"><div><span class="state ${ready?'ready':''}">${labels[g.status]||g.status}</span><h3>${g.name}</h3><p class="meta">Modo: ${g.type}<br>Engine: ${g.engine}<br>Renderização: ${g.rendering}</p><p class="description">${g.description||''}</p></div><a class="btn ${ready?'':'disabled'}" href="${ready?g.launch_url:'#'}">${ready?'Abrir':'Em preparação'}</a></article>`;
+      const openable=!!g.launch_url && ['ready','alpha'].includes(g.status);
+      const klass=g.status==='ready'?'ready':(g.status==='alpha'?'alpha':'');
+      return `<article class="card"><div><span class="state ${klass}">${labels[g.status]||g.status}</span><h3>${g.name}</h3><p class="meta">Modo: ${g.type}<br>Engine: ${g.engine}<br>Renderização: ${g.rendering}</p><p class="description">${g.description||''}</p></div><a class="btn ${openable?'':'disabled'}" href="${openable?g.launch_url:'#'}">${openable?'Abrir':'Em preparação'}</a></article>`;
     }).join('');
   }catch(e){status.innerHTML='<span class="pill error">API indisponível</span>';grid.innerHTML='<article class="card"><div><span class="state error">erro</span><h3>Não foi possível carregar o catálogo</h3><p class="meta">Confira os containers e tente novamente.</p></div></article>'}
 }
