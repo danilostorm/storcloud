@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>StorCloud Retro Hub</title>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#070a12;color:#f6f7fb}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0,#16234a 0,#070a12 45%)}
+    header{padding:22px 5vw;border-bottom:1px solid #ffffff14;display:flex;justify-content:space-between;align-items:center;gap:16px}.brand{font-weight:900;font-size:1.25rem}.back{color:#b9c2ff;text-decoration:none}
+    main{max-width:1400px;margin:auto;padding:48px 5vw}.hero{max-width:850px}.hero h1{font-size:clamp(2.5rem,7vw,5.5rem);line-height:.95;margin:0 0 16px}.hero p{color:#aab1c7;line-height:1.7;font-size:1.02rem}.pills{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0 38px}.pill{padding:8px 11px;border:1px solid #ffffff15;background:#ffffff09;border-radius:999px;color:#cbd0e1;font-size:.8rem}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}.card{min-height:270px;padding:22px;border-radius:20px;border:1px solid #ffffff16;background:linear-gradient(145deg,#131a2d,#0d111d);box-shadow:0 22px 65px #0005;display:flex;flex-direction:column;justify-content:space-between}.state{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:#99a7ff}.state.ready{color:#79f6bd}.state.experimental{color:#ffd27a}.card h2{font-size:1.35rem;margin:8px 0}.meta,.desc{color:#929bb5;line-height:1.55;font-size:.9rem}.desc{color:#b5bbcd;margin-top:11px}.btn{display:block;text-align:center;text-decoration:none;color:white;background:#6273ff;border-radius:12px;padding:12px 14px;font-weight:800;margin-top:18px}.btn.disabled{opacity:.4;pointer-events:none}.warn{margin-top:34px;padding:16px 18px;border:1px solid #ffffff12;background:#ffffff08;border-radius:15px;color:#acb4ca;line-height:1.6}.error{color:#ff9c9c}
+  </style>
+</head>
+<body>
+<header><div class="brand">StorCloud · Retro Hub</div><a class="back" href="/">← Biblioteca</a></header>
+<main>
+  <section class="hero">
+    <h1>Retro, renderizado no seu dispositivo.</h1>
+    <p>Os emuladores WebAssembly são carregados pelo StorCloud, mas CPU, vídeo, áudio e controles rodam no navegador do jogador. Selecione suas próprias ROMs diretamente no engine; o servidor não inclui jogos comerciais.</p>
+    <div class="pills" id="caps"><span class="pill">Detectando navegador…</span></div>
+  </section>
+  <section class="grid" id="engines"><article class="card"><div><span class="state">carregando</span><h2>Engines</h2><p class="meta">Consultando API…</p></div></article></section>
+  <div class="warn">ROMs, ISOs e BIOS proprietárias não fazem parte do StorCloud. Os engines são integrados para carregar arquivos que o próprio usuário possui.</div>
+</main>
+<script>
+const labels={ready:'pronto',installing:'instalando',planned:'planejado',experimental:'experimental',failed:'falhou'};
+async function start(){
+  const caps=document.getElementById('caps');
+  const grid=document.getElementById('engines');
+  const wasm=typeof WebAssembly==='object';
+  const webgpu=!!navigator.gpu;
+  const gamepads='getGamepads' in navigator;
+  caps.innerHTML=`<span class="pill">WebAssembly: ${wasm?'sim':'não'}</span><span class="pill">WebGPU: ${webgpu?'sim':'não'}</span><span class="pill">Gamepad: ${gamepads?'sim':'não'}</span><span class="pill">Execução: local</span>`;
+  try{
+    const data=await fetch('/api/retro/engines').then(r=>r.json());
+    grid.innerHTML=data.items.map(e=>{
+      const ready=e.status==='ready' && e.launch_url;
+      const stateClass=ready?'ready':(e.status==='experimental'?'experimental':'');
+      return `<article class="card"><div><span class="state ${stateClass}">${labels[e.status]||e.status}</span><h2>${e.name}</h2><p class="meta">Sistema: ${e.systems.join(', ')}<br>Engine: ${e.engine}<br>Render: ${e.rendering}</p><p class="desc">${e.description}</p></div><a class="btn ${ready?'':'disabled'}" href="${ready?e.launch_url:'#'}">${ready?'Abrir engine':(e.status==='experimental'?'Runtime em integração':'Preparando')}</a></article>`;
+    }).join('');
+  }catch(err){grid.innerHTML='<article class="card"><div><span class="state error">erro</span><h2>API indisponível</h2><p class="meta">Verifique os containers do StorCloud.</p></div></article>'}
+}
+start();
+</script>
+</body>
+</html>
