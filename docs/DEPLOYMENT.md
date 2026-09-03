@@ -2,7 +2,7 @@
 
 ## Ubuntu server
 
-StorCloud v0.7 uses Docker Compose for PostgreSQL, FastAPI and the web launcher, with persistent private ROM and cloud-save storage.
+StorCloud v0.8 uses Docker Compose for PostgreSQL, FastAPI and the web launcher, with persistent private ROM/save storage and a mounted hybrid execution catalog.
 
 ```bash
 cd /opt/storcloud
@@ -12,24 +12,27 @@ bash update.sh
 
 `update.sh` performs these steps:
 
-1. pulls the current `main` branch
-2. creates/repairs `.env` with random persistent secrets and ROM limits
+1. pulls `main`
+2. creates/repairs `.env` with persistent secrets and defaults
 3. creates `storage/saves` and `storage/roms`
 4. removes legacy separate Retro engine payloads
-5. prepares browser-native game packages such as Doom/FreeDoom WASM
-6. starts PostgreSQL and waits for its health check
-7. rebuilds/restarts API and web services
+5. prepares browser-native game packages
+6. starts PostgreSQL and waits for health
+7. rebuilds/restarts API and web
 8. checks API/database health and prints container status
 
-## Services
+## Web surfaces
 
-- Web launcher: `http://SERVER_IP:8080`
-- Minha Biblioteca: `http://SERVER_IP:8080/library/`
-- Account/device dashboard: `http://SERVER_IP:8080/account/`
-- Unified Retro player: `http://SERVER_IP:8080/retro/`
+- Home: `http://SERVER_IP:8080/`
+- Hybrid Catalog: `http://SERVER_IP:8080/catalog/`
+- Personal Library: `http://SERVER_IP:8080/library/`
+- Account: `http://SERVER_IP:8080/account/`
+- Retro Player: `http://SERVER_IP:8080/retro/`
 - PC Local: `http://SERVER_IP:8080/pc/`
-- API: `http://SERVER_IP:8000`
-- FastAPI docs: `http://SERVER_IP:8000/docs`
+- Achievements: `http://SERVER_IP:8080/achievements/`
+- Admin: `http://SERVER_IP:8080/admin/`
+- Streaming fallback: `http://SERVER_IP:8080/stream/`
+- API docs: `http://SERVER_IP:8000/docs`
 
 Expected containers:
 
@@ -39,45 +42,50 @@ Expected containers:
 
 ## First administrator
 
-The first update creates `/opt/storcloud/.env`. Read the first-admin setup token locally on the VM:
-
 ```bash
 grep '^STORCLOUD_SETUP_TOKEN=' /opt/storcloud/.env
 ```
 
-Open `/account/`, create the first account and provide this token. The token does not grant admin to later registrations once at least one user exists.
+Open `/account/`, create the first account and provide that token.
 
 ## Persistence
 
-Do not remove these during ordinary upgrades:
+Do not remove during normal upgrades:
 
-- Docker volume `storcloud-postgres` — accounts, sessions, library metadata, devices, tickets and save metadata
-- `/opt/storcloud/storage/saves` — cloud save-state files
-- `/opt/storcloud/storage/roms` — private ROM library, separated by user ID
-- `/opt/storcloud/runtime/games` — generated browser game packages
-- `/opt/storcloud/.env` — database password and server settings
+- Docker volume `storcloud-postgres`
+- `/opt/storcloud/storage/saves`
+- `/opt/storcloud/storage/roms`
+- `/opt/storcloud/runtime/games`
+- `/opt/storcloud/.env`
+- `/opt/storcloud/catalog/games.json`
 
-`docker compose down` is safe. `docker compose down -v` deletes the PostgreSQL volume and must not be used as a normal update command.
+`docker compose down` is safe. Do not use `docker compose down -v` for a normal update because it removes PostgreSQL data.
 
 ## ROM upload limit
 
-Default per-file limit is 2 GiB:
+Default per-file limit:
 
 ```env
 STORCLOUD_MAX_ROM_BYTES=2147483648
 ```
 
-The bundled Nginx config also accepts request bodies up to 2 GiB and uses long API proxy timeouts. Change both the application setting and Nginx limit if you intentionally need larger files.
+The bundled Nginx config also allows up to 2 GiB request bodies.
 
 ## HTTPS
 
-For LAN HTTP testing, `STORCLOUD_COOKIE_SECURE=false` is expected. Before exposing StorCloud through a public HTTPS domain, set:
+LAN testing:
+
+```env
+STORCLOUD_COOKIE_SECURE=false
+```
+
+For a public HTTPS domain:
 
 ```env
 STORCLOUD_COOKIE_SECURE=true
 ```
 
-Then restart:
+Then rebuild:
 
 ```bash
 docker compose up -d --build
@@ -85,13 +93,33 @@ docker compose up -d --build
 
 ## Registration
 
-Open registration is controlled in `.env`:
-
 ```env
 STORCLOUD_ALLOW_REGISTRATION=true
 ```
 
-Set it to `false` when you want only existing users to log in.
+Set to `false` to close new account creation.
+
+## Streaming fallback
+
+Disabled by default:
+
+```env
+STORCLOUD_STREAMING_ENABLED=false
+STORCLOUD_STREAMING_PROVIDER=sunshine
+STORCLOUD_STREAMING_HOST=
+STORCLOUD_STREAMING_GATEWAY_TEMPLATE=
+```
+
+Supported provider values:
+
+- `sunshine`
+- `wolf`
+
+Set `STORCLOUD_STREAMING_HOST` to the Moonlight-compatible rendering host when you actually have one available.
+
+`STORCLOUD_STREAMING_GATEWAY_TEMPLATE` is optional. It is only needed when you have a compatible external web/client handoff layer. Supported placeholders are `{host}`, `{app_id}` and `{provider}`.
+
+The central StorCloud VM still does not need a GPU for Browser WASM, Retro WASM or PC Local. A remote streaming host does need suitable rendering hardware for the games it serves.
 
 ## Verify
 
@@ -100,40 +128,36 @@ cd /opt/storcloud
 bash scripts/doctor.sh
 ```
 
-Or manually:
+Manual checks:
 
 ```bash
 docker compose ps
 curl -fsS http://127.0.0.1:8000/healthz
-curl -fsS http://127.0.0.1:8000/setup/status
-du -sh storage storage/saves storage/roms runtime
+curl -fsS http://127.0.0.1:8000/catalog
+curl -fsS http://127.0.0.1:8000/streaming/status
 ```
 
-`/healthz` should report the API and database online.
-
-## Full application backup
-
-Use the bundled backup command:
+## Backup
 
 ```bash
 cd /opt/storcloud
 bash scripts/backup.sh
 ```
 
-It creates:
+The backup contains:
 
 - compressed PostgreSQL dump
-- one compressed storage archive containing both `saves/` and `roms/`
+- saves + private ROM storage archive
 - SHA-256 checksum file
 
-Database metadata and storage files belong together for a complete restore.
+## Local Agent
 
-## Legacy Retro cleanup
+Install the Local Agent on each player's Windows/Linux computer. Pair it from `/account/`.
 
-Older builds installed separate emulator payloads under `runtime/retro/` and `runtime/vendor/`. `scripts/cleanup-legacy-retro.sh` removes those legacy directories while preserving `runtime/games/`.
+Local Agent v0.3 tracks the spawned game process itself, so native-game playtime continues to be recorded even if the browser tab is closed.
 
-## Local Agent is not a central-server service
+GitHub Actions builds Windows x64 and Linux x64 artifacts whenever agent code changes.
 
-Install the StorCloud Local Agent on each player's Windows/Linux computer. Pair it from `/account/`. The central VM does not render PC Local sessions.
+## Legacy cleanup
 
-GitHub Actions builds Windows x64 and Linux x64 Local Agent artifacts whenever agent code changes.
+Older separate mGBA, FBNeo, N64, PPSSPP, SNES9x and BlastEm payloads are removed automatically by `scripts/cleanup-legacy-retro.sh`.
