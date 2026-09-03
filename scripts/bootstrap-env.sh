@@ -23,6 +23,7 @@ STORCLOUD_SETUP_TOKEN=$(random_hex 24)
 STORCLOUD_SESSION_DAYS=30
 STORCLOUD_ALLOW_REGISTRATION=true
 STORCLOUD_COOKIE_SECURE=false
+STORCLOUD_MAX_ROM_BYTES=2147483648
 EOF
   echo "[StorCloud] Created .env with database credentials and first-admin setup token."
 else
@@ -32,7 +33,8 @@ else
   grep -q '^STORCLOUD_SESSION_DAYS=' "$ENV_FILE" || echo 'STORCLOUD_SESSION_DAYS=30' >> "$ENV_FILE"
   grep -q '^STORCLOUD_ALLOW_REGISTRATION=' "$ENV_FILE" || echo 'STORCLOUD_ALLOW_REGISTRATION=true' >> "$ENV_FILE"
   grep -q '^STORCLOUD_COOKIE_SECURE=' "$ENV_FILE" || echo 'STORCLOUD_COOKIE_SECURE=false' >> "$ENV_FILE"
+  grep -q '^STORCLOUD_MAX_ROM_BYTES=' "$ENV_FILE" || echo 'STORCLOUD_MAX_ROM_BYTES=2147483648' >> "$ENV_FILE"
 fi
 
 chmod 600 "$ENV_FILE" 2>/dev/null || true
-mkdir -p "$ROOT_DIR/storage/saves"
+mkdir -p "$ROOT_DIR/storage/saves" "$ROOT_DIR/storage/roms"
