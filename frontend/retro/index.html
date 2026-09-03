@@ -16,18 +16,18 @@
   </style>
 </head>
 <body>
-<header><div class="brand">StorCloud · Retro Library</div><div><a class="back" href="/account/">Conta</a> · <a class="back" href="/">Biblioteca principal</a></div></header>
+<header><div class="brand">StorCloud · Retro Library</div><div><a class="back" href="/library/">Minha Biblioteca</a> · <a class="back" href="/account/">Conta</a> · <a class="back" href="/">Início</a></div></header>
 <main>
   <section class="hero">
-    <div><h1>Um player. Todos os consoles.</h1><p>Escolha sua ROM e jogue no mesmo ambiente. O StorCloud seleciona o core RetroArch/WebAssembly por trás; emulação, vídeo e áudio acontecem no seu dispositivo. Com login, save states podem ser sincronizados com sua conta.</p></div>
+    <div><h1>Um player. Todos os consoles.</h1><p>Abra um jogo da sua biblioteca privada ou escolha uma ROM local. O StorCloud seleciona o core RetroArch/WebAssembly internamente; emulação, vídeo e áudio continuam no seu dispositivo.</p></div>
     <div class="caps" id="caps"><span class="pill">Detectando dispositivo…</span></div>
   </section>
 
   <section class="workspace">
     <aside class="panel library">
-      <h2>Minha ROM local</h2>
-      <p class="muted">A ROM fica no dispositivo do jogador. O StorCloud não inclui ROMs ou BIOS proprietárias.</p>
-      <div class="drop" id="drop"><strong>Escolha um jogo</strong><span class="muted">NES, SNES, GB/GBC, GBA, Mega Drive, Arcade, N64 e PS1.</span><input class="file" id="rom" type="file" /></div>
+      <h2>Jogo atual</h2>
+      <p class="muted">A biblioteca da conta pode guardar suas próprias ROMs. Você também pode jogar um arquivo local sem enviá-lo ao servidor.</p>
+      <div class="drop" id="drop"><strong>Escolher ROM local</strong><span class="muted">NES, SNES, GB/GBC, GBA, Mega Drive, Arcade, N64 e PS1.</span><input class="file" id="rom" type="file" /></div>
       <div class="field"><label for="platform">Plataforma / core</label><select id="platform"><option value="">Selecione ou deixe detectar automaticamente</option></select></div>
       <div class="gameinfo" id="gameinfo"><span class="muted">Nenhuma ROM selecionada.</span></div>
       <div class="actions"><button class="btn" id="play" disabled>Jogar</button><button class="btn secondary" id="clear" disabled>Limpar</button></div>
@@ -36,7 +36,7 @@
 
     <section class="panel player" id="playerShell">
       <div class="playerbar"><button class="btn secondary" id="pause" disabled>Pausar</button><button class="btn secondary" id="resume" disabled>Continuar</button><button class="btn secondary" id="save" disabled>Salvar cloud</button><button class="btn secondary" id="loadState" disabled>Carregar cloud</button><button class="btn secondary" id="exportState" disabled>Exportar state</button><span class="spacer"></span><button class="btn secondary" id="fullscreen">Tela cheia</button><button class="btn secondary" id="exit" disabled>Sair</button><input id="stateFile" type="file" hidden /></div>
-      <div class="stage" id="stage"><div class="empty" id="empty"><b>Pronto para jogar</b>Selecione uma ROM à esquerda. O emulador será carregado somente quando necessário.</div><canvas id="gameCanvas" tabindex="-1"></canvas></div>
+      <div class="stage" id="stage"><div class="empty" id="empty"><b>Pronto para jogar</b>Abra um jogo da Minha Biblioteca ou selecione uma ROM local.</div><canvas id="gameCanvas" tabindex="-1"></canvas></div>
       <div class="status" id="status">Player unificado aguardando jogo.</div>
     </section>
   </section>
@@ -46,42 +46,58 @@
 import { Nostalgist } from 'https://esm.sh/nostalgist@0.21.1';
 
 const $=id=>document.getElementById(id);
-const romInput=$('rom'), platformSelect=$('platform'), playBtn=$('play'), clearBtn=$('clear');
-const pauseBtn=$('pause'), resumeBtn=$('resume'), saveBtn=$('save'), loadStateBtn=$('loadState'), exportStateBtn=$('exportState'), exitBtn=$('exit');
-let file=null, emulator=null, platforms=[];
+const romInput=$('rom'),platformSelect=$('platform'),playBtn=$('play'),clearBtn=$('clear');
+const pauseBtn=$('pause'),resumeBtn=$('resume'),saveBtn=$('save'),loadStateBtn=$('loadState'),exportStateBtn=$('exportState'),exitBtn=$('exit');
+let file=null,emulator=null,platforms=[],libraryRom=null;
 
-function setStatus(text, cls=''){ $('status').className='status '+cls; $('status').textContent=text; }
-function extension(name){ return (name.split('.').pop()||'').toLowerCase(); }
-function selectedPlatform(){ return platforms.find(p=>p.id===platformSelect.value); }
-function detectPlatform(f){ const ext=extension(f.name); const matches=platforms.filter(p=>p.extensions.includes(ext)); return matches.length===1?matches[0]:null; }
-function gameKey(){if(!file)return'';const base=file.name.toLowerCase().replace(/\.[^.]+$/,'').replace(/[^a-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'game';return `${base}-${file.size}`;}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function setStatus(text,cls=''){$('status').className='status '+cls;$('status').textContent=text;}
+function extension(name){return(name.split('.').pop()||'').toLowerCase();}
+function selectedPlatform(){return platforms.find(p=>p.id===platformSelect.value);}
+function detectPlatform(f){const ext=extension(f.name);const matches=platforms.filter(p=>p.extensions.includes(ext));return matches.length===1?matches[0]:null;}
+function gameKey(){if(libraryRom)return `rom-${libraryRom.id}`;if(!file)return'';const base=file.name.toLowerCase().replace(/\.[^.]+$/,'').replace(/[^a-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'game';return `${base}-${file.size}`;}
 
 function updateGameInfo(){
-  if(!file){ $('gameinfo').innerHTML='<span class="muted">Nenhuma ROM selecionada.</span>'; playBtn.disabled=true; clearBtn.disabled=true; return; }
-  const p=selectedPlatform();
-  $('gameinfo').innerHTML=`<strong>${file.name}</strong><div class="muted">${(file.size/1024/1024).toFixed(2)} MB · ${p?p.name:'plataforma não definida'}<br>Cloud key: ${gameKey()}</div>`;
-  playBtn.disabled=!p; clearBtn.disabled=false;
+  if(!file){$('gameinfo').innerHTML='<span class="muted">Nenhuma ROM selecionada.</span>';playBtn.disabled=true;clearBtn.disabled=true;return;}
+  const p=selectedPlatform(),source=libraryRom?'Minha Biblioteca':'Arquivo local',title=libraryRom?.title||file.name;
+  $('gameinfo').innerHTML=`<strong>${esc(title)}</strong><div class="muted">${(file.size/1024/1024).toFixed(2)} MB · ${p?esc(p.name):'plataforma não definida'}<br>Origem: ${source}<br>Cloud key: ${esc(gameKey())}</div>`;
+  playBtn.disabled=!p;clearBtn.disabled=false;
 }
 
 async function loadPlatforms(){
   platforms=(await fetch('/api/retro/platforms').then(r=>r.json())).items;
-  platformSelect.innerHTML='<option value="">Selecione ou deixe detectar automaticamente</option>'+platforms.map(p=>`<option value="${p.id}">${p.short} · ${p.name}${p.experimental?' · experimental':''}</option>`).join('');
-  $('systems').innerHTML=platforms.map(p=>`<span class="chip">${p.short}</span>`).join('');
+  platformSelect.innerHTML='<option value="">Selecione ou deixe detectar automaticamente</option>'+platforms.map(p=>`<option value="${p.id}">${esc(p.short)} · ${esc(p.name)}${p.experimental?' · experimental':''}</option>`).join('');
+  $('systems').innerHTML=platforms.map(p=>`<span class="chip">${esc(p.short)}</span>`).join('');
 }
 
-romInput.addEventListener('change',()=>{file=romInput.files?.[0]||null;if(file){const p=detectPlatform(file);if(p)platformSelect.value=p.id;}updateGameInfo();});
+async function loadLibraryRomFromUrl(){
+  const romId=new URLSearchParams(location.search).get('rom');if(!romId)return;
+  setStatus('Carregando jogo privado da sua biblioteca…','warn');
+  const listResponse=await fetch('/api/library/roms');
+  if(listResponse.status===401){setStatus('Entre na Conta para abrir este jogo da biblioteca.','err');return;}
+  if(!listResponse.ok)throw new Error(`biblioteca HTTP ${listResponse.status}`);
+  const items=(await listResponse.json()).items||[];
+  const item=items.find(r=>r.id===romId);if(!item){setStatus('Este jogo não existe na sua biblioteca.','err');return;}
+  const response=await fetch(item.file_url);if(!response.ok)throw new Error(`ROM HTTP ${response.status}`);
+  const blob=await response.blob();
+  libraryRom=item;file=new File([blob],item.file_name,{type:blob.type||'application/octet-stream'});platformSelect.value=item.platform_id;romInput.value='';updateGameInfo();
+  setStatus(`${item.title} carregado da sua biblioteca. Clique em Jogar.`,'ok');
+}
+
+romInput.addEventListener('change',()=>{libraryRom=null;file=romInput.files?.[0]||null;if(file){const p=detectPlatform(file);if(p)platformSelect.value=p.id;}updateGameInfo();});
 platformSelect.addEventListener('change',updateGameInfo);
-clearBtn.addEventListener('click',()=>{file=null;romInput.value='';platformSelect.value='';updateGameInfo();});
+clearBtn.addEventListener('click',()=>{libraryRom=null;file=null;romInput.value='';platformSelect.value='';history.replaceState({},'',location.pathname);updateGameInfo();});
 
 playBtn.addEventListener('click',async()=>{
-  const p=selectedPlatform(); if(!file||!p)return;
-  playBtn.disabled=true; setStatus(`Preparando ${p.short} com ${p.core}…`,'warn');
+  const p=selectedPlatform();if(!file||!p)return;
+  playBtn.disabled=true;setStatus(`Preparando ${p.short} com ${p.core}…`,'warn');
   try{
     if(emulator){try{emulator.exit();}catch{}emulator=null;}
     $('empty').style.display='none';
     emulator=await Nostalgist.prepare({element:$('gameCanvas'),core:p.core,rom:{fileName:file.name,fileContent:file},cache:{core:true,rom:false,bios:true,shader:true},retroarchConfig:{rewind_enable:true,savestate_thumbnail_enable:true,video_smooth:false,menu_driver:'rgui'}});
     setStatus('Arquivos preparados. Iniciando emulação local…','warn');await emulator.start();
-    setStatus(`${file.name} rodando localmente · core ${p.core}`,'ok');[pauseBtn,resumeBtn,saveBtn,loadStateBtn,exportStateBtn,exitBtn].forEach(b=>b.disabled=false);$('gameCanvas').focus();
+    if(libraryRom)fetch(`/api/library/roms/${encodeURIComponent(libraryRom.id)}/played`,{method:'POST'}).catch(()=>{});
+    setStatus(`${libraryRom?.title||file.name} rodando localmente · core ${p.core}`,'ok');[pauseBtn,resumeBtn,saveBtn,loadStateBtn,exportStateBtn,exitBtn].forEach(b=>b.disabled=false);$('gameCanvas').focus();
   }catch(e){console.error(e);setStatus('Falha ao iniciar: '+(e?.message||e),'err');$('empty').style.display='block';playBtn.disabled=false;}
 });
 
@@ -90,27 +106,16 @@ resumeBtn.addEventListener('click',()=>{try{emulator?.resume();setStatus('Jogo e
 exitBtn.addEventListener('click',()=>{try{emulator?.exit();}catch{}emulator=null;$('empty').style.display='block';setStatus('Sessão encerrada.');[pauseBtn,resumeBtn,saveBtn,loadStateBtn,exportStateBtn,exitBtn].forEach(b=>b.disabled=true);playBtn.disabled=!selectedPlatform();});
 
 async function captureState(){const result=await emulator.saveState();const state=result?.state||result;return state instanceof Blob?state:new Blob([state]);}
-function downloadBlob(blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(file?.name||'storcloud')+'.state';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+function downloadBlob(blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(libraryRom?.title||file?.name||'storcloud')+'.state';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 
 saveBtn.addEventListener('click',async()=>{
   if(!emulator||!file)return;
-  try{
-    const blob=await captureState();const form=new FormData();form.append('file',blob,file.name+'.state');
-    const r=await fetch(`/api/saves/${encodeURIComponent(gameKey())}/auto`,{method:'POST',body:form});
-    if(r.status===401){downloadBlob(blob);setStatus('Sem login: state exportado localmente. Entre na Conta para cloud save.','warn');return;}
-    if(!r.ok){let d={};try{d=await r.json()}catch{}throw new Error(d.detail||`HTTP ${r.status}`);}
-    setStatus('Save state sincronizado com sua conta · slot auto.','ok');
-  }catch(e){setStatus('Não foi possível salvar: '+(e?.message||e),'err');}
+  try{const blob=await captureState(),form=new FormData();form.append('file',blob,(libraryRom?.title||file.name)+'.state');const r=await fetch(`/api/saves/${encodeURIComponent(gameKey())}/auto`,{method:'POST',body:form});if(r.status===401){downloadBlob(blob);setStatus('Sem login: state exportado localmente. Entre na Conta para cloud save.','warn');return;}if(!r.ok){let d={};try{d=await r.json()}catch{}throw new Error(d.detail||`HTTP ${r.status}`);}setStatus('Save state sincronizado com sua conta · slot auto.','ok');}catch(e){setStatus('Não foi possível salvar: '+(e?.message||e),'err');}
 });
 
 loadStateBtn.addEventListener('click',async()=>{
   if(!emulator||!file)return;
-  try{
-    const r=await fetch(`/api/saves/${encodeURIComponent(gameKey())}/auto`);
-    if(r.ok){const blob=await r.blob();await emulator.loadState(blob);setStatus('Cloud save carregado · slot auto.','ok');return;}
-    if(r.status===401||r.status===404){setStatus('Cloud save indisponível; escolha um state local.','warn');$('stateFile').click();return;}
-    throw new Error(`HTTP ${r.status}`);
-  }catch(e){setStatus('Falha ao carregar cloud save: '+(e?.message||e),'err');}
+  try{const r=await fetch(`/api/saves/${encodeURIComponent(gameKey())}/auto`);if(r.ok){const blob=await r.blob();await emulator.loadState(blob);setStatus('Cloud save carregado · slot auto.','ok');return;}if(r.status===401||r.status===404){setStatus('Cloud save indisponível; escolha um state local.','warn');$('stateFile').click();return;}throw new Error(`HTTP ${r.status}`);}catch(e){setStatus('Falha ao carregar cloud save: '+(e?.message||e),'err');}
 });
 
 exportStateBtn.addEventListener('click',async()=>{if(!emulator)return;try{downloadBlob(await captureState());setStatus('State exportado para este dispositivo.','ok');}catch(e){setStatus('Falha ao exportar: '+(e?.message||e),'err');}});
@@ -119,7 +124,7 @@ $('fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenEle
 
 const wasm=typeof WebAssembly==='object',webgpu=!!navigator.gpu,gamepad='getGamepads' in navigator;
 $('caps').innerHTML=`<span class="pill">WebAssembly: ${wasm?'sim':'não'}</span><span class="pill">WebGPU: ${webgpu?'sim':'não'}</span><span class="pill">Gamepad: ${gamepad?'sim':'não'}</span><span class="pill">Cloud save: conta opcional</span><span class="pill">Render: dispositivo local</span>`;
-loadPlatforms().catch(e=>setStatus('Falha ao carregar plataformas: '+e.message,'err'));
+(async()=>{try{await loadPlatforms();await loadLibraryRomFromUrl();}catch(e){setStatus('Falha ao preparar player: '+e.message,'err');}})();
 </script>
 </body>
 </html>
