@@ -32,11 +32,17 @@ services:
       STORCLOUD_SAVE_ROOT: /storage/saves
       STORCLOUD_ROM_ROOT: /storage/roms
       STORCLOUD_MAX_ROM_BYTES: ${STORCLOUD_MAX_ROM_BYTES:-2147483648}
+      STORCLOUD_CATALOG_PATH: /catalog/games.json
+      STORCLOUD_STREAMING_ENABLED: ${STORCLOUD_STREAMING_ENABLED:-false}
+      STORCLOUD_STREAMING_PROVIDER: ${STORCLOUD_STREAMING_PROVIDER:-sunshine}
+      STORCLOUD_STREAMING_HOST: ${STORCLOUD_STREAMING_HOST:-}
+      STORCLOUD_STREAMING_GATEWAY_TEMPLATE: ${STORCLOUD_STREAMING_GATEWAY_TEMPLATE:-}
     ports:
       - "8000:8000"
     volumes:
       - ./runtime:/runtime:ro
       - ./storage:/storage
+      - ./catalog:/catalog:ro
 
   web:
     image: nginx:1.27-alpine
