@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="StorCloud API", version="0.4.0")
+app = FastAPI(title="StorCloud API", version="0.5.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,62 +21,14 @@ def installed(game_id: str) -> bool:
 
 
 RETRO_PLATFORMS = [
-    {
-        "id": "nes",
-        "name": "Nintendo Entertainment System",
-        "short": "NES",
-        "core": "fceumm",
-        "extensions": ["nes"],
-    },
-    {
-        "id": "snes",
-        "name": "Super Nintendo / Super Famicom",
-        "short": "SNES",
-        "core": "snes9x",
-        "extensions": ["sfc", "smc"],
-    },
-    {
-        "id": "gb",
-        "name": "Game Boy / Game Boy Color",
-        "short": "GB / GBC",
-        "core": "mgba",
-        "extensions": ["gb", "gbc"],
-    },
-    {
-        "id": "gba",
-        "name": "Game Boy Advance",
-        "short": "GBA",
-        "core": "mgba",
-        "extensions": ["gba"],
-    },
-    {
-        "id": "genesis",
-        "name": "Mega Drive / Genesis",
-        "short": "Mega Drive",
-        "core": "genesis_plus_gx",
-        "extensions": ["md", "gen"],
-    },
-    {
-        "id": "sms",
-        "name": "Master System",
-        "short": "Master System",
-        "core": "genesis_plus_gx",
-        "extensions": ["sms"],
-    },
-    {
-        "id": "gamegear",
-        "name": "Game Gear",
-        "short": "Game Gear",
-        "core": "genesis_plus_gx",
-        "extensions": ["gg"],
-    },
-    {
-        "id": "arcade",
-        "name": "Arcade / Neo Geo",
-        "short": "Arcade",
-        "core": "fbneo",
-        "extensions": ["zip"],
-    },
+    {"id": "nes", "name": "Nintendo Entertainment System", "short": "NES", "core": "fceumm", "extensions": ["nes"]},
+    {"id": "snes", "name": "Super Nintendo / Super Famicom", "short": "SNES", "core": "snes9x", "extensions": ["sfc", "smc"]},
+    {"id": "gb", "name": "Game Boy / Game Boy Color", "short": "GB / GBC", "core": "mgba", "extensions": ["gb", "gbc"]},
+    {"id": "gba", "name": "Game Boy Advance", "short": "GBA", "core": "mgba", "extensions": ["gba"]},
+    {"id": "genesis", "name": "Mega Drive / Genesis", "short": "Mega Drive", "core": "genesis_plus_gx", "extensions": ["md", "gen"]},
+    {"id": "sms", "name": "Master System", "short": "Master System", "core": "genesis_plus_gx", "extensions": ["sms"]},
+    {"id": "gamegear", "name": "Game Gear", "short": "Game Gear", "core": "genesis_plus_gx", "extensions": ["gg"]},
+    {"id": "arcade", "name": "Arcade / Neo Geo", "short": "Arcade", "core": "fbneo", "extensions": ["zip"]},
     {
         "id": "n64",
         "name": "Nintendo 64",
@@ -92,6 +44,33 @@ RETRO_PLATFORMS = [
         "core": "pcsx_rearmed",
         "extensions": ["chd"],
         "experimental": True,
+    },
+]
+
+EXECUTION_MODES = [
+    {
+        "id": "browser-wasm",
+        "priority": 1,
+        "rendering": "client",
+        "description": "Real WebAssembly/WebGL/WebGPU ports run directly in the browser.",
+    },
+    {
+        "id": "retro-wasm",
+        "priority": 2,
+        "rendering": "client",
+        "description": "Unified RetroArch/Nostalgist player selects the core internally.",
+    },
+    {
+        "id": "local-native",
+        "priority": 3,
+        "rendering": "client-native",
+        "description": "StorCloud Local Agent launches allowlisted Windows/Linux games on the player's device.",
+    },
+    {
+        "id": "remote-stream",
+        "priority": 4,
+        "rendering": "remote-host",
+        "description": "Fallback only when no local execution route is viable.",
     },
 ]
 
@@ -125,9 +104,9 @@ def game_catalog():
             "type": "local",
             "engine": "StorCloud Local Agent",
             "rendering": "client-native",
-            "status": "planned",
+            "status": "alpha",
             "launch_url": "/pc/",
-            "description": "Jogos Windows/Linux executados no computador do jogador e renderizados pela GPU local, controlados pelo StorCloud.",
+            "description": "Jogos Windows/Linux executados no computador do jogador e renderizados pela GPU local. O agente alpha já faz detecção e lançamento por allowlist.",
         },
         {
             "id": "pc-wasm",
@@ -135,7 +114,7 @@ def game_catalog():
             "type": "wasm",
             "engine": "WASM / WebGL / WebGPU",
             "rendering": "client",
-            "status": "research",
+            "status": "active-track",
             "launch_url": None,
             "description": "Ports e engines de PC compilados para WebAssembly executam 100% no navegador quando tecnicamente compatíveis.",
         },
@@ -144,8 +123,8 @@ def game_catalog():
             "name": "Streaming Fallback",
             "type": "stream",
             "engine": "Wolf / Sunshine compatible",
-            "rendering": "server-or-host",
-            "status": "planned",
+            "rendering": "remote-host",
+            "status": "fallback",
             "launch_url": None,
             "description": "Último recurso para títulos que não podem executar localmente no navegador ou no agente do jogador.",
         },
@@ -156,9 +135,9 @@ def game_catalog():
 def root():
     return {
         "name": "StorCloud",
-        "version": "0.4.0",
+        "version": "0.5.0",
         "status": "online",
-        "modes": ["browser-wasm", "retro-wasm", "local-native", "remote-stream"],
+        "modes": [mode["id"] for mode in EXECUTION_MODES],
         "strategy": "local-first",
     }
 
@@ -186,14 +165,21 @@ def list_retro_platforms():
     }
 
 
+@app.get("/runtime/strategy")
+def runtime_strategy():
+    return {"strategy": "local-first", "modes": EXECUTION_MODES}
+
+
 @app.get("/capabilities")
 def capabilities():
     return {
         "wasm": True,
         "webgl": True,
         "webgpu": "client-detected",
-        "retro_emulation": "client",
-        "local_agent": "planned",
-        "remote_streaming": "planned",
+        "retro_emulation": "client-unified",
+        "local_agent": "alpha",
+        "local_agent_bind": "127.0.0.1:47831",
+        "remote_streaming": "fallback",
         "server_gpu_required_for_wasm": False,
+        "server_gpu_required_for_local_agent": False,
     }
