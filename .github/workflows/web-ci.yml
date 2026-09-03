@@ -28,12 +28,18 @@ jobs:
             nginx:1.27-alpine nginx -t
       - name: Validate required launcher files
         run: |
-          test -f frontend/index.html
-          test -f frontend/catalog/index.html
-          test -f frontend/library/index.html
-          test -f frontend/account/index.html
-          test -f frontend/assets/console.css
-          test -f frontend/assets/spatial-nav.js
+          for f in \
+            frontend/index.html \
+            frontend/catalog/index.html \
+            frontend/library/index.html \
+            frontend/account/index.html \
+            frontend/admin/index.html \
+            frontend/pc/index.html \
+            frontend/achievements/index.html \
+            frontend/assets/console.css \
+            frontend/assets/spatial-nav.js; do
+            test -f "$f"
+          done
           grep -q 'healthz' frontend/index.html
           grep -q 'claim-admin' frontend/account/index.html
           grep -q 'scanAll' frontend/library/index.html
@@ -50,6 +56,9 @@ jobs:
               Path('frontend/catalog/index.html'),
               Path('frontend/library/index.html'),
               Path('frontend/account/index.html'),
+              Path('frontend/admin/index.html'),
+              Path('frontend/pc/index.html'),
+              Path('frontend/achievements/index.html'),
           ]
           for page in pages:
               html = page.read_text(encoding='utf-8')
