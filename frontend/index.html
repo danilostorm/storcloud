@@ -15,19 +15,19 @@
   </style>
 </head>
 <body>
-  <header><div class="brand">StorCloud</div><div class="badge">v0.2 Local First</div></header>
+  <header><div class="brand">StorCloud</div><div class="badge">v0.3 Retro Hub</div></header>
   <main>
     <section class="hero">
       <h1>Jogue onde o jogo roda melhor.</h1>
-      <p>WebAssembly e emuladores executam no dispositivo do jogador, usando a CPU/GPU local. O servidor organiza a biblioteca, usuários, saves e entrega dos arquivos. Streaming fica como fallback para jogos que realmente precisarem dele.</p>
+      <p>WebAssembly e emuladores executam no dispositivo do jogador, usando CPU/GPU local. O servidor organiza biblioteca, usuários, saves e entrega dos arquivos. Streaming fica como fallback para jogos que realmente precisarem dele.</p>
       <div class="status" id="status"><span class="pill">API: verificando…</span></div>
     </section>
     <section class="grid" id="games"><article class="card"><div><span class="state">carregando</span><h3>Catálogo</h3><p class="meta">Buscando jogos da API…</p></div></article></section>
-    <div class="note">Os jogos WASM são renderizados no dispositivo do usuário. O StorCloud não precisa de GPU no servidor para esse modo.</div>
+    <div class="note">Os jogos WASM e o núcleo Retro são renderizados no dispositivo do usuário. O StorCloud não precisa de GPU no servidor para esses modos.</div>
   </main>
 <script>
 const api='/api';
-const labels={ready:'pronto',installing:'instalando',planned:'planejado',research:'pesquisa'};
+const labels={ready:'pronto',installing:'instalando',planned:'planejado',research:'pesquisa',experimental:'experimental'};
 async function load(){
   const status=document.getElementById('status');
   const grid=document.getElementById('games');
@@ -38,7 +38,7 @@ async function load(){
     status.innerHTML=`<span class="pill">API: ${health.ok?'online':'erro'}</span><span class="pill">WebAssembly: ${wasm?'sim':'não'}</span><span class="pill">WebGPU: ${webgpu?'sim':'não'}</span><span class="pill">Render: dispositivo local</span>`;
     grid.innerHTML=games.items.map(g=>{
       const ready=g.status==='ready' && g.launch_url;
-      return `<article class="card"><div><span class="state ${ready?'ready':''}">${labels[g.status]||g.status}</span><h3>${g.name}</h3><p class="meta">Modo: ${g.type}<br>Engine: ${g.engine}<br>Renderização: ${g.rendering}</p><p class="description">${g.description||''}</p></div><a class="btn ${ready?'':'disabled'}" href="${ready?g.launch_url:'#'}">${ready?'Jogar agora':'Em preparação'}</a></article>`;
+      return `<article class="card"><div><span class="state ${ready?'ready':''}">${labels[g.status]||g.status}</span><h3>${g.name}</h3><p class="meta">Modo: ${g.type}<br>Engine: ${g.engine}<br>Renderização: ${g.rendering}</p><p class="description">${g.description||''}</p></div><a class="btn ${ready?'':'disabled'}" href="${ready?g.launch_url:'#'}">${ready?'Abrir':'Em preparação'}</a></article>`;
     }).join('');
   }catch(e){status.innerHTML='<span class="pill error">API indisponível</span>';grid.innerHTML='<article class="card"><div><span class="state error">erro</span><h3>Não foi possível carregar o catálogo</h3><p class="meta">Confira os containers e tente novamente.</p></div></article>'}
 }
