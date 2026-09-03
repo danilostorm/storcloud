@@ -20,9 +20,6 @@ echo "[StorCloud] Unified Retro player + hybrid execution catalog enabled."
 echo "[StorCloud] Building and starting services..."
 docker compose up -d --build --remove-orphans
 
-echo "[StorCloud] Services:"
-docker compose ps
-
 echo "[StorCloud] Waiting for API + database readiness..."
 api_ready=0
 for attempt in $(seq 1 45); do
@@ -39,25 +36,52 @@ if [ "$api_ready" -eq 1 ]; then
   echo
 else
   echo "[StorCloud] ERROR: API did not become ready."
-  echo "[StorCloud] Recent API logs:"
   docker compose logs --tail=80 api || true
-  echo "[StorCloud] Recent database logs:"
   docker compose logs --tail=40 db || true
   rm -f /tmp/storcloud-health.json
   exit 1
 fi
 rm -f /tmp/storcloud-health.json
 
-echo "[StorCloud] Checking hybrid catalog..."
-if curl -fsS --max-time 5 http://127.0.0.1:8000/catalog >/tmp/storcloud-catalog.json 2>/dev/null; then
-  echo "[StorCloud] Hybrid catalog online."
+echo "[StorCloud] Reloading web gateway..."
+# Nginx resolves Docker service names at runtime, but a restart also guarantees
+# changed bind-mounted nginx.conf is loaded on every deployment.
+docker compose restart web >/dev/null
+
+web_ready=0
+for attempt in $(seq 1 20); do
+  if curl -fsS --max-time 3 http://127.0.0.1:8080/api/healthz >/tmp/storcloud-web-health.json 2>/dev/null; then
+    web_ready=1
+    break
+  fi
+  sleep 1
+done
+
+if [ "$web_ready" -eq 1 ]; then
+  echo "[StorCloud] Web gateway -> API online."
+  cat /tmp/storcloud-web-health.json || true
+  echo
 else
-  echo "[StorCloud] ERROR: hybrid catalog endpoint unavailable after API became ready."
-  docker compose logs --tail=80 api || true
+  echo "[StorCloud] ERROR: web gateway cannot reach API."
+  docker compose logs --tail=80 web api || true
+  rm -f /tmp/storcloud-web-health.json
+  exit 1
+fi
+rm -f /tmp/storcloud-web-health.json
+
+echo "[StorCloud] Checking hybrid catalog through web gateway..."
+if curl -fsS --max-time 5 http://127.0.0.1:8080/api/catalog >/tmp/storcloud-catalog.json 2>/dev/null; then
+  echo "[StorCloud] Hybrid catalog online through Nginx."
+else
+  echo "[StorCloud] ERROR: hybrid catalog unavailable through web gateway."
+  docker compose logs --tail=80 web api || true
   rm -f /tmp/storcloud-catalog.json
   exit 1
 fi
 rm -f /tmp/storcloud-catalog.json
+
+echo "[StorCloud] Services:"
+docker compose ps
 
 echo "[StorCloud] Done."
 echo "  Home:         :8080/"
