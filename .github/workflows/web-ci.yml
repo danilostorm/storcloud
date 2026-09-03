@@ -18,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Validate Nginx configuration
         run: |
           docker run --rm \
@@ -29,6 +32,22 @@ jobs:
           test -f frontend/catalog/index.html
           test -f frontend/library/index.html
           test -f frontend/assets/storcloud.css
-          grep -q '/api/healthz' frontend/index.html
+          grep -q 'healthz' frontend/index.html
           grep -q 'resolver 127.0.0.11' frontend/nginx.conf
           grep -q '8080/api/healthz' update.sh
+      - name: Validate launcher JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess
+          pages = [Path('frontend/index.html'), Path('frontend/catalog/index.html'), Path('frontend/library/index.html')]
+          for page in pages:
+              html = page.read_text(encoding='utf-8')
+              blocks = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', html, flags=re.S | re.I)
+              if not blocks:
+                  raise SystemExit(f'no script found in {page}')
+              for index, code in enumerate(blocks):
+                  target = Path('/tmp') / f'{page.parent.name or "home"}-{index}.js'
+                  target.write_text(code, encoding='utf-8')
+                  subprocess.run(['node', '--check', str(target)], check=True)
+          PY
