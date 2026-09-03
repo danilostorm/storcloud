@@ -1,61 +1,31 @@
 <!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>StorCloud · Minha Biblioteca</title>
-  <link rel="stylesheet" href="/assets/storcloud.css">
-</head>
-<body>
-<div class="app-shell">
-  <aside class="sidebar">
-    <a class="brand-mark" href="/">S</a>
-    <nav class="side-nav">
-      <a class="side-link" href="/"><span class="ico">⌂</span><span>Início</span></a>
-      <a class="side-link" href="/catalog/"><span class="ico">◫</span><span>Explorar</span></a>
-      <a class="side-link active" href="/library/"><span class="ico">▦</span><span>Biblioteca</span></a>
-      <a class="side-link" href="/pc/"><span class="ico">▣</span><span>PC</span></a>
-      <a class="side-link" href="/achievements/"><span class="ico">◆</span><span>Conquistas</span></a>
-    </nav>
-    <div class="sidebar-bottom"><a class="side-link" href="/account/"><span class="ico">●</span><span>Conta</span></a></div>
-  </aside>
-  <div class="content">
-    <header class="topbar">
-      <div class="page-title">MINHA BIBLIOTECA</div>
-      <div class="searchbox"><span>⌕</span><input id="search" placeholder="Buscar na coleção"></div>
-      <div class="top-spacer"></div>
-      <a id="who" class="profile-link" href="/account/">Verificando conta…</a>
-    </header>
-    <main class="main">
-      <section class="section" style="margin-top:4px">
-        <div class="section-head"><div><div class="eyebrow">COLEÇÃO PESSOAL</div><h2 style="font-size:34px;margin-top:7px">Seus jogos, prontos para abrir.</h2><p>ROMs privadas por usuário, favoritos e acesso direto ao player Retro unificado.</p></div></div>
-        <div id="status" class="notice">Carregando biblioteca…</div>
-        <section class="upload-panel" id="uploadBox" hidden>
-          <input id="title" placeholder="Título do jogo (opcional)">
-          <select id="platform"><option value="">Plataforma</option></select>
-          <input id="rom" type="file">
-          <button id="upload" class="btn">＋ Adicionar</button>
-        </section>
-        <div class="filterbar">
-          <button id="allBtn" class="filter active">Todos</button>
-          <button id="favBtn" class="filter">★ Favoritos</button>
-          <button id="refresh" class="filter">↻ Atualizar</button>
-        </div>
-        <section id="grid" class="library-grid"></section>
-      </section>
-    </main>
-  </div>
-</div>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>StorCloud · Retro Library</title><link rel="stylesheet" href="/assets/console.css"></head>
+<body class="console"><div id="background" class="console-bg"></div>
+<header class="console-top"><a class="console-brand" href="/">StorCloud Play</a><nav class="console-nav"><a href="/">Jogos</a><a href="/catalog/">Explorar</a><a class="active" href="/library/">Retro</a><a href="/pc/">PC Local</a><a href="/achievements/">Conquistas</a></nav><div class="console-actions"><a class="console-circle" href="/retro/">▶</a><a id="who" class="console-user" href="/account/">Conta</a></div></header>
+<main class="console-main">
+<section class="console-hero" style="min-height:310px"><div class="console-hero-copy"><div class="console-kicker">RETRO LIBRARY · AUTO ARTWORK</div><h1 style="font-size:clamp(42px,5vw,74px)">Sua coleção ganha vida.</h1><p>Adicione suas próprias ROMs. O StorCloud identifica o nome do jogo, procura box art e screenshots na biblioteca pública Libretro e mantém tudo em cache na sua instância.</p><div class="console-hero-actions"><button id="scanAll" class="console-btn">✦ Escanear capas</button><a class="console-btn dark" href="/retro/">Abrir player</a></div></div></section>
+<div id="status" class="console-notice">Carregando biblioteca…</div>
+<section id="uploadBox" class="console-panel" hidden><div class="console-form"><input id="title" placeholder="Título (opcional)"><select id="platform"><option value="">Plataforma</option></select><input id="rom" type="file"><button id="upload" class="console-btn">＋ Adicionar</button></div></section>
+<section class="rail-section"><div class="rail-head"><div><h2>Plataformas</h2><p>Filtre sua coleção por sistema.</p></div></div><div id="platformPills" class="platform-pills"><button class="platform-pill active" data-platform="">Todos</button></div></section>
+<section class="rail-section"><div class="rail-head"><div><h2>Minha coleção</h2><p id="countText">0 jogos</p></div><div><button id="favBtn" class="platform-pill">★ Favoritos</button></div></div><div id="grid" class="console-grid"></div></section>
+<input id="coverPicker" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+</main>
 <script>
-const api='/api',$=id=>document.getElementById(id);let roms=[],platforms=[],onlyFav=false;
+const api='/api',$=id=>document.getElementById(id);let roms=[],platforms=[],platformFilter='',onlyFav=false,coverTarget=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function msg(t,c=''){const e=$('status');e.className='notice '+c;e.textContent=t}
-async function req(path,options={}){const r=await fetch(api+path,options);let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.detail||`HTTP ${r.status}`);return d}
-function coverClass(id){return id==='gba'||id==='gb'?'linear-gradient(145deg,#0b6f65,#36c980)':id==='snes'?'linear-gradient(145deg,#263b78,#7655cc)':id==='genesis'?'linear-gradient(145deg,#1d293e,#e2385d)':id==='n64'?'linear-gradient(145deg,#1e5f35,#e9b52d)':id==='ps1'?'linear-gradient(145deg,#4d5361,#1b1f27)':'linear-gradient(145deg,#1e2e6a,#5a3eb0 56%,#e24f8f)'}
-async function boot(){try{const me=await req('/auth/me');$('who').textContent=me.user.username;$('uploadBox').hidden=false;platforms=(await req('/retro/platforms')).items;$('platform').innerHTML='<option value="">Plataforma</option>'+platforms.map(p=>`<option value="${p.id}">${p.short} · ${p.name}</option>`).join('');await load()}catch(e){$('who').textContent='Entrar';msg('Entre na sua conta para acessar a biblioteca.','err');$('grid').innerHTML='<div class="empty-state">Sua biblioteca é privada e exige login.</div>'}}
-async function load(){const d=await req('/library/roms');roms=d.items;render();msg(`${d.count} jogo(s) na sua coleção.`,'ok')}
-function render(){const q=$('search').value.trim().toLowerCase();const list=roms.filter(r=>(!onlyFav||r.favorite)&&(!q||(r.title+' '+r.platform_id).toLowerCase().includes(q)));$('grid').innerHTML=list.length?list.map(r=>{const p=platforms.find(p=>p.id===r.platform_id);return `<article class="library-card"><div class="cover-art" style="background:${coverClass(r.platform_id)}"><div class="cover-code">${esc((p?.short||r.platform_id).toUpperCase())}</div></div><div class="library-body"><h3>${esc(r.title)}</h3><div class="meta">${esc(p?.name||r.platform_id)} · ${(r.size_bytes/1024/1024).toFixed(2)} MB${r.last_played_at?'<br>Último jogo: '+new Date(r.last_played_at).toLocaleDateString():''}</div></div><div class="library-actions"><a class="btn" href="/retro/?rom=${r.id}">▶ Jogar</a><button class="btn ghost" onclick="favorite('${r.id}',${!r.favorite})">${r.favorite?'★':'☆'}</button><button class="btn danger" onclick="removeRom('${r.id}')">×</button></div></article>`}).join(''):'<div class="empty-state">Nenhum jogo neste filtro. Adicione uma ROM própria acima.</div>'}
-$('upload').onclick=async()=>{const f=$('rom').files?.[0],p=$('platform').value;if(!f||!p){msg('Escolha plataforma e arquivo.','err');return}const form=new FormData();form.append('platform_id',p);form.append('title',$('title').value);form.append('file',f,f.name);try{msg('Enviando jogo para sua biblioteca…');const r=await fetch(api+'/library/roms',{method:'POST',body:form});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.detail||`HTTP ${r.status}`);$('rom').value='';$('title').value='';await load()}catch(e){msg('Falha no upload: '+e.message,'err')}};
-window.favorite=async(id,value)=>{try{await req(`/library/roms/${id}/favorite?value=${value}`,{method:'PUT'});await load()}catch(e){msg(e.message,'err')}};window.removeRom=async id=>{if(!confirm('Excluir este jogo da sua biblioteca?'))return;try{await req('/library/roms/'+id,{method:'DELETE'});await load()}catch(e){msg(e.message,'err')}};
-$('search').oninput=render;$('allBtn').onclick=()=>{onlyFav=false;$('allBtn').classList.add('active');$('favBtn').classList.remove('active');render()};$('favBtn').onclick=()=>{onlyFav=true;$('favBtn').classList.add('active');$('allBtn').classList.remove('active');render()};$('refresh').onclick=()=>load().catch(e=>msg(e.message,'err'));boot();
-</script>
-</body></html>
+function msg(text,cls=''){const e=$('status');e.className='console-notice '+cls;e.textContent=text}
+async function req(path,options={}){const r=await fetch(api+path,options);let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.detail||`HTTP ${r.status}`);return d}
+function platformName(id){return platforms.find(p=>p.id===id)?.short||id.toUpperCase()}
+function bindBackdrop(card,rom){const run=()=>{if(rom.background_url){$('background').style.backgroundImage=`linear-gradient(90deg,#05070dea,#05070d77),url("${rom.background_url}")`;$('background').classList.add('has-image')}else{$('background').style.backgroundImage='radial-gradient(circle at 72% 22%,#563f9e66 0,transparent 34%),linear-gradient(135deg,#0b1530,#05070d 58%)';$('background').classList.remove('has-image')}};card.addEventListener('focusin',run);card.addEventListener('mouseenter',run)}
+function render(){const list=roms.filter(r=>(!platformFilter||r.platform_id===platformFilter)&&(!onlyFav||r.favorite));$('countText').textContent=`${list.length} jogo${list.length===1?'':'s'}`;$('grid').innerHTML='';if(!list.length){$('grid').innerHTML='<div class="console-notice">Nenhum jogo neste filtro.</div>';return}for(const r of list){const card=document.createElement('article');card.className='console-card';card.innerHTML=`<div class="cover">${r.cover_url?`<img src="${esc(r.cover_url)}" alt="Capa de ${esc(r.title)}" loading="lazy">`:`<div style="position:absolute;inset:0;display:grid;place-items:center;font-size:34px;font-weight:1000">${esc(platformName(r.platform_id))}</div>`}</div><div class="body"><h3>${esc(r.title)}</h3><div class="meta">${esc(platformName(r.platform_id))} · ${(r.size_bytes/1048576).toFixed(2)} MB<br>${r.cover_url?'Capa: '+esc(r.metadata_source||'local'):(r.scanned_at?'Capa não encontrada':'Ainda não escaneado')}</div></div><div class="actions"><a class="mini-btn primary" href="/retro/?rom=${r.id}">▶ Jogar</a><button class="mini-btn" onclick="scanOne('${r.id}')">✦ Scan</button><button class="mini-btn" onclick="pickCover('${r.id}')">▧ Capa</button><button class="mini-btn" onclick="favorite('${r.id}',${!r.favorite})">${r.favorite?'★':'☆'}</button><button class="mini-btn danger" onclick="removeRom('${r.id}')">×</button></div>`;bindBackdrop(card,r);$('grid').appendChild(card)}}
+async function load(){const d=await req('/library/roms');roms=d.items;render();msg(`${d.count} jogo(s) carregado(s). ${d.items.filter(x=>x.cover_url).length} com capa.`,'ok')}
+async function boot(){try{const me=await req('/auth/me');$('who').textContent=me.user.username+(me.user.role==='admin'?' · Admin':'');$('uploadBox').hidden=false;platforms=(await req('/retro/platforms')).items;$('platform').innerHTML='<option value="">Plataforma</option>'+platforms.map(p=>`<option value="${p.id}">${esc(p.short)} · ${esc(p.name)}</option>`).join('');$('platformPills').innerHTML='<button class="platform-pill active" data-platform="">Todos</button>'+platforms.map(p=>`<button class="platform-pill" data-platform="${p.id}">${esc(p.short)}</button>`).join('');$('platformPills').onclick=e=>{const b=e.target.closest('[data-platform]');if(!b)return;platformFilter=b.dataset.platform;document.querySelectorAll('[data-platform]').forEach(x=>x.classList.toggle('active',x===b));render()};await load()}catch(e){$('who').textContent='Entrar';msg('Entre na sua conta para usar a Retro Library.','err')}}
+$('upload').onclick=async()=>{const f=$('rom').files?.[0],p=$('platform').value;if(!f||!p){msg('Escolha a plataforma e a ROM.','err');return}const form=new FormData();form.append('platform_id',p);form.append('title',$('title').value);form.append('file',f,f.name);try{msg('Enviando ROM…');const r=await fetch(api+'/library/roms',{method:'POST',body:form});const d=await r.json();if(!r.ok)throw Error(d.detail||r.status);msg('ROM adicionada. Procurando capa automaticamente…');await fetch(d.auto_scan_url,{method:'POST'});$('rom').value='';$('title').value='';await load()}catch(e){msg('Falha: '+e.message,'err')}};
+window.scanOne=async id=>{try{msg('Procurando box art e screenshot…');const d=await req(`/library/roms/${id}/scan`,{method:'POST'});await load();msg(d.matched?'Capa encontrada e salva na sua instância.':'Nenhuma capa exata encontrada. Você pode enviar uma capa manual. ',d.matched?'ok':'')}catch(e){msg('Scan falhou: '+e.message,'err')}};
+$('scanAll').onclick=async()=>{try{const q=await req('/library/scan',{method:'POST'});let done=0,found=0;for(const item of q.items){msg(`Escaneando capas ${done+1}/${q.items.length}: ${item.title}`);try{const d=await req(`/library/roms/${item.id}/scan`,{method:'POST'});if(d.matched)found++}catch{}done++}await load();msg(`Scan concluído: ${found}/${done} capas encontradas.`,'ok')}catch(e){msg(e.message,'err')}};
+window.pickCover=id=>{coverTarget=id;$('coverPicker').value='';$('coverPicker').click()};$('coverPicker').onchange=async()=>{const f=$('coverPicker').files?.[0];if(!f||!coverTarget)return;const form=new FormData();form.append('file',f,f.name);try{msg('Enviando capa personalizada…');const r=await fetch(`${api}/library/roms/${coverTarget}/cover`,{method:'POST',body:form});if(!r.ok){const d=await r.json();throw Error(d.detail||r.status)}await load();msg('Capa personalizada salva.','ok')}catch(e){msg(e.message,'err')}};
+window.favorite=async(id,value)=>{await req(`/library/roms/${id}/favorite?value=${value}`,{method:'PUT'});await load()};window.removeRom=async id=>{if(!confirm('Excluir esta ROM, saves de mídia e capa da biblioteca?'))return;await req('/library/roms/'+id,{method:'DELETE'});await load()};$('favBtn').onclick=()=>{onlyFav=!onlyFav;$('favBtn').classList.toggle('active',onlyFav);render()};
+boot();
+</script><script src="/assets/spatial-nav.js"></script></body></html>
