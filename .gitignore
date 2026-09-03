@@ -8,10 +8,16 @@ venv/
 node_modules/
 dist/
 
+# Rust
+**/target/
+
 # Environment
 .env
 .env.*
 !.env.example
+
+# Local Agent private configuration
+local-agent/config/games.json
 
 # Runtime storage
 storage/*
