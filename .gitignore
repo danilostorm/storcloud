@@ -16,6 +16,8 @@ dist/
 # Runtime storage
 storage/*
 !storage/.gitkeep
+runtime/*
+!runtime/.gitkeep
 
 # Game payloads / ROMs / proprietary assets
 games/**/assets/
