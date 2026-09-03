@@ -1,25 +1,61 @@
 <!doctype html>
 <html lang="pt-BR">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>StorCloud Minha Biblioteca</title>
-<style>
-:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#070a12;color:#f7f8ff}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0,#1b2856 0,#070a12 46%)}button,input,select{font:inherit}header{height:70px;padding:0 4vw;border-bottom:1px solid #ffffff14;display:flex;align-items:center;justify-content:space-between}.brand{font-weight:900}.links a{color:#c0c8ff;text-decoration:none;margin-left:14px}main{max-width:1450px;margin:auto;padding:38px 4vw 60px}.hero{display:flex;justify-content:space-between;gap:24px;align-items:end;flex-wrap:wrap}.hero h1{font-size:clamp(2.7rem,6vw,5.5rem);line-height:.94;margin:0 0 13px}.hero p,.muted{color:#9ba5bf;line-height:1.65}.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin:28px 0}.btn{border:0;border-radius:12px;padding:11px 14px;background:#6675ff;color:#fff;font-weight:800;cursor:pointer;text-decoration:none;display:inline-block}.btn.secondary{background:#ffffff0d;border:1px solid #ffffff16}.btn.danger{background:#a43c53}.btn:disabled{opacity:.45}.upload{display:grid;grid-template-columns:1fr 1fr 1.5fr auto;gap:10px;padding:16px;border:1px solid #ffffff14;background:#ffffff08;border-radius:18px;margin:20px 0}.upload input,.upload select{width:100%;padding:11px;border:1px solid #ffffff16;border-radius:11px;background:#080d18;color:#fff}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}.card{min-height:280px;border:1px solid #ffffff16;background:linear-gradient(155deg,#171f36,#0c111e);border-radius:20px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 18px 60px #0004}.cover{height:120px;border-radius:15px;background:radial-gradient(circle at 20% 10%,#5668dd55,#0a0f1c);display:flex;align-items:center;justify-content:center;font-size:2.1rem;font-weight:900;color:#c9d0ff}.card h3{margin:14px 0 6px}.meta{font-size:.82rem;color:#8d97b1;line-height:1.55}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}.actions .btn{padding:9px 11px;font-size:.83rem}.status{padding:12px 14px;border-radius:12px;background:#ffffff08;border:1px solid #ffffff12;color:#aeb7d0;margin:18px 0}.ok{color:#78f3b9}.err{color:#ff9c9c}.empty{padding:44px;text-align:center;border:1px dashed #ffffff20;border-radius:20px;color:#8d97b1}@media(max-width:850px){.upload{grid-template-columns:1fr}}
-</style></head>
-<body><header><div class="brand">StorCloud · Minha Biblioteca</div><div class="links"><a href="/retro/">Retro</a><a href="/account/">Conta</a><a href="/">Início</a></div></header><main>
-<section class="hero"><div><h1>Sua coleção. Um player.</h1><p>Envie ROMs que você possui, organize por plataforma e abra tudo no player Retro unificado. Os arquivos ficam privados na sua conta.</p></div><div id="who" class="muted">Verificando sessão…</div></section>
-<div id="status" class="status">Carregando biblioteca…</div>
-<section class="upload" id="uploadBox" hidden><input id="title" placeholder="Título (opcional)"><select id="platform"><option value="">Plataforma</option></select><input id="rom" type="file"><button id="upload" class="btn">Adicionar</button></section>
-<div class="toolbar"><button id="refresh" class="btn secondary">Atualizar</button><label class="muted"><input id="favorites" type="checkbox"> somente favoritos</label></div>
-<section id="grid" class="grid"></section>
-</main>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>StorCloud · Minha Biblioteca</title>
+  <link rel="stylesheet" href="/assets/storcloud.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand-mark" href="/">S</a>
+    <nav class="side-nav">
+      <a class="side-link" href="/"><span class="ico">⌂</span><span>Início</span></a>
+      <a class="side-link" href="/catalog/"><span class="ico">◫</span><span>Explorar</span></a>
+      <a class="side-link active" href="/library/"><span class="ico">▦</span><span>Biblioteca</span></a>
+      <a class="side-link" href="/pc/"><span class="ico">▣</span><span>PC</span></a>
+      <a class="side-link" href="/achievements/"><span class="ico">◆</span><span>Conquistas</span></a>
+    </nav>
+    <div class="sidebar-bottom"><a class="side-link" href="/account/"><span class="ico">●</span><span>Conta</span></a></div>
+  </aside>
+  <div class="content">
+    <header class="topbar">
+      <div class="page-title">MINHA BIBLIOTECA</div>
+      <div class="searchbox"><span>⌕</span><input id="search" placeholder="Buscar na coleção"></div>
+      <div class="top-spacer"></div>
+      <a id="who" class="profile-link" href="/account/">Verificando conta…</a>
+    </header>
+    <main class="main">
+      <section class="section" style="margin-top:4px">
+        <div class="section-head"><div><div class="eyebrow">COLEÇÃO PESSOAL</div><h2 style="font-size:34px;margin-top:7px">Seus jogos, prontos para abrir.</h2><p>ROMs privadas por usuário, favoritos e acesso direto ao player Retro unificado.</p></div></div>
+        <div id="status" class="notice">Carregando biblioteca…</div>
+        <section class="upload-panel" id="uploadBox" hidden>
+          <input id="title" placeholder="Título do jogo (opcional)">
+          <select id="platform"><option value="">Plataforma</option></select>
+          <input id="rom" type="file">
+          <button id="upload" class="btn">＋ Adicionar</button>
+        </section>
+        <div class="filterbar">
+          <button id="allBtn" class="filter active">Todos</button>
+          <button id="favBtn" class="filter">★ Favoritos</button>
+          <button id="refresh" class="filter">↻ Atualizar</button>
+        </div>
+        <section id="grid" class="library-grid"></section>
+      </section>
+    </main>
+  </div>
+</div>
 <script>
-const api='/api',$=id=>document.getElementById(id);let roms=[],platforms=[];function msg(t,c=''){const e=$('status');e.className='status '+c;e.textContent=t}
+const api='/api',$=id=>document.getElementById(id);let roms=[],platforms=[],onlyFav=false;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function msg(t,c=''){const e=$('status');e.className='notice '+c;e.textContent=t}
 async function req(path,options={}){const r=await fetch(api+path,options);let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.detail||`HTTP ${r.status}`);return d}
-async function boot(){try{const me=await req('/auth/me');$('who').textContent='Logado como '+me.user.username;$('uploadBox').hidden=false;platforms=(await req('/retro/platforms')).items;$('platform').innerHTML='<option value="">Plataforma</option>'+platforms.map(p=>`<option value="${p.id}">${p.short} · ${p.name}</option>`).join('');await load()}catch(e){$('who').innerHTML='<a style="color:#c0c8ff" href="/account/">Entre na conta para usar a biblioteca</a>';msg('Login necessário para acessar sua biblioteca.','err');$('grid').innerHTML='<div class="empty">Sua biblioteca é privada e exige login.</div>'}}
-async function load(){const d=await req('/library/roms');roms=d.items;render();msg(`${d.count} jogo(s) na sua biblioteca.`,'ok')}
-function render(){const onlyFav=$('favorites').checked;const list=roms.filter(r=>!onlyFav||r.favorite);$('grid').innerHTML=list.length?list.map(r=>{const p=platforms.find(p=>p.id===r.platform_id);return `<article class="card"><div><div class="cover">${(p?.short||r.platform_id).toUpperCase()}</div><h3>${escapeHtml(r.title)}</h3><div class="meta">${p?.name||r.platform_id}<br>${(r.size_bytes/1024/1024).toFixed(2)} MB${r.last_played_at?'<br>Jogado: '+new Date(r.last_played_at).toLocaleString():''}</div></div><div class="actions"><a class="btn" href="/retro/?rom=${r.id}">Jogar</a><button class="btn secondary" onclick="favorite('${r.id}',${!r.favorite})">${r.favorite?'★ Favorito':'☆ Favoritar'}</button><button class="btn danger" onclick="removeRom('${r.id}')">Excluir</button></div></article>`}).join(''):'<div class="empty">Nenhum jogo aqui ainda. Use o formulário acima para adicionar uma ROM própria.</div>'}
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-$('upload').onclick=async()=>{const f=$('rom').files?.[0],p=$('platform').value;if(!f||!p){msg('Escolha plataforma e arquivo.','err');return}const form=new FormData();form.append('platform_id',p);form.append('title',$('title').value);form.append('file',f,f.name);try{msg('Enviando ROM para sua biblioteca…');const r=await fetch(api+'/library/roms',{method:'POST',body:form});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.detail||`HTTP ${r.status}`);$('rom').value='';$('title').value='';await load()}catch(e){msg('Falha no upload: '+e.message,'err')}};
-window.favorite=async(id,value)=>{try{await req(`/library/roms/${id}/favorite?value=${value}`,{method:'PUT'});await load()}catch(e){msg(e.message,'err')}};
-window.removeRom=async id=>{if(!confirm('Excluir esta ROM da sua biblioteca?'))return;try{await req('/library/roms/'+id,{method:'DELETE'});await load()}catch(e){msg(e.message,'err')}};
-$('refresh').onclick=()=>load().catch(e=>msg(e.message,'err'));$('favorites').onchange=render;boot();
-</script></body></html>
+function coverClass(id){return id==='gba'||id==='gb'?'linear-gradient(145deg,#0b6f65,#36c980)':id==='snes'?'linear-gradient(145deg,#263b78,#7655cc)':id==='genesis'?'linear-gradient(145deg,#1d293e,#e2385d)':id==='n64'?'linear-gradient(145deg,#1e5f35,#e9b52d)':id==='ps1'?'linear-gradient(145deg,#4d5361,#1b1f27)':'linear-gradient(145deg,#1e2e6a,#5a3eb0 56%,#e24f8f)'}
+async function boot(){try{const me=await req('/auth/me');$('who').textContent=me.user.username;$('uploadBox').hidden=false;platforms=(await req('/retro/platforms')).items;$('platform').innerHTML='<option value="">Plataforma</option>'+platforms.map(p=>`<option value="${p.id}">${p.short} · ${p.name}</option>`).join('');await load()}catch(e){$('who').textContent='Entrar';msg('Entre na sua conta para acessar a biblioteca.','err');$('grid').innerHTML='<div class="empty-state">Sua biblioteca é privada e exige login.</div>'}}
+async function load(){const d=await req('/library/roms');roms=d.items;render();msg(`${d.count} jogo(s) na sua coleção.`,'ok')}
+function render(){const q=$('search').value.trim().toLowerCase();const list=roms.filter(r=>(!onlyFav||r.favorite)&&(!q||(r.title+' '+r.platform_id).toLowerCase().includes(q)));$('grid').innerHTML=list.length?list.map(r=>{const p=platforms.find(p=>p.id===r.platform_id);return `<article class="library-card"><div class="cover-art" style="background:${coverClass(r.platform_id)}"><div class="cover-code">${esc((p?.short||r.platform_id).toUpperCase())}</div></div><div class="library-body"><h3>${esc(r.title)}</h3><div class="meta">${esc(p?.name||r.platform_id)} · ${(r.size_bytes/1024/1024).toFixed(2)} MB${r.last_played_at?'<br>Último jogo: '+new Date(r.last_played_at).toLocaleDateString():''}</div></div><div class="library-actions"><a class="btn" href="/retro/?rom=${r.id}">▶ Jogar</a><button class="btn ghost" onclick="favorite('${r.id}',${!r.favorite})">${r.favorite?'★':'☆'}</button><button class="btn danger" onclick="removeRom('${r.id}')">×</button></div></article>`}).join(''):'<div class="empty-state">Nenhum jogo neste filtro. Adicione uma ROM própria acima.</div>'}
+$('upload').onclick=async()=>{const f=$('rom').files?.[0],p=$('platform').value;if(!f||!p){msg('Escolha plataforma e arquivo.','err');return}const form=new FormData();form.append('platform_id',p);form.append('title',$('title').value);form.append('file',f,f.name);try{msg('Enviando jogo para sua biblioteca…');const r=await fetch(api+'/library/roms',{method:'POST',body:form});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.detail||`HTTP ${r.status}`);$('rom').value='';$('title').value='';await load()}catch(e){msg('Falha no upload: '+e.message,'err')}};
+window.favorite=async(id,value)=>{try{await req(`/library/roms/${id}/favorite?value=${value}`,{method:'PUT'});await load()}catch(e){msg(e.message,'err')}};window.removeRom=async id=>{if(!confirm('Excluir este jogo da sua biblioteca?'))return;try{await req('/library/roms/'+id,{method:'DELETE'});await load()}catch(e){msg(e.message,'err')}};
+$('search').oninput=render;$('allBtn').onclick=()=>{onlyFav=false;$('allBtn').classList.add('active');$('favBtn').classList.remove('active');render()};$('favBtn').onclick=()=>{onlyFav=true;$('favBtn').classList.add('active');$('allBtn').classList.remove('active');render()};$('refresh').onclick=()=>load().catch(e=>msg(e.message,'err'));boot();
+</script>
+</body></html>
