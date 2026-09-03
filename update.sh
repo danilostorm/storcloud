@@ -23,18 +23,41 @@ docker compose up -d --build --remove-orphans
 echo "[StorCloud] Services:"
 docker compose ps
 
-echo "[StorCloud] Health check:"
-if curl -fsS http://127.0.0.1:8000/healthz >/dev/null 2>&1; then
-  echo "[StorCloud] API + database online."
-else
-  echo "[StorCloud] WARN: API health check not ready yet. Check: docker compose logs api db"
-fi
+echo "[StorCloud] Waiting for API + database readiness..."
+api_ready=0
+for attempt in $(seq 1 45); do
+  if curl -fsS --max-time 3 http://127.0.0.1:8000/healthz >/tmp/storcloud-health.json 2>/dev/null; then
+    api_ready=1
+    break
+  fi
+  sleep 1
+done
 
-if curl -fsS http://127.0.0.1:8000/catalog >/dev/null 2>&1; then
+if [ "$api_ready" -eq 1 ]; then
+  echo "[StorCloud] API + database online."
+  cat /tmp/storcloud-health.json || true
+  echo
+else
+  echo "[StorCloud] ERROR: API did not become ready."
+  echo "[StorCloud] Recent API logs:"
+  docker compose logs --tail=80 api || true
+  echo "[StorCloud] Recent database logs:"
+  docker compose logs --tail=40 db || true
+  rm -f /tmp/storcloud-health.json
+  exit 1
+fi
+rm -f /tmp/storcloud-health.json
+
+echo "[StorCloud] Checking hybrid catalog..."
+if curl -fsS --max-time 5 http://127.0.0.1:8000/catalog >/tmp/storcloud-catalog.json 2>/dev/null; then
   echo "[StorCloud] Hybrid catalog online."
 else
-  echo "[StorCloud] WARN: hybrid catalog endpoint unavailable."
+  echo "[StorCloud] ERROR: hybrid catalog endpoint unavailable after API became ready."
+  docker compose logs --tail=80 api || true
+  rm -f /tmp/storcloud-catalog.json
+  exit 1
 fi
+rm -f /tmp/storcloud-catalog.json
 
 echo "[StorCloud] Done."
 echo "  Home:         :8080/"
