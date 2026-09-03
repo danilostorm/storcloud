@@ -1,0 +1,36 @@
+name: Local Agent
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'local-agent/**'
+      - 'scripts/build-local-agent.sh'
+      - '.github/workflows/local-agent.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: storcloud-local-agent-linux-x64
+            binary: local-agent/target/release/storcloud-local-agent
+          - os: windows-latest
+            artifact: storcloud-local-agent-windows-x64
+            binary: local-agent/target/release/storcloud-local-agent.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build release
+        run: cargo build --release --manifest-path local-agent/Cargo.toml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.binary }}
+          if-no-files-found: error
