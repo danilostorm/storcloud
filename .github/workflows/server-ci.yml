@@ -37,6 +37,7 @@ jobs:
       STORCLOUD_SETUP_TOKEN: ci-setup-token
       STORCLOUD_COOKIE_SECURE: 'false'
       STORCLOUD_SAVE_ROOT: ${{ github.workspace }}/.tmp-saves
+      STORCLOUD_ROM_ROOT: ${{ github.workspace }}/.tmp-roms
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
