@@ -1,0 +1,12 @@
+{
+  "games": [
+    {
+      "id": "example-game",
+      "name": "Example Local Game",
+      "executable": "C:\\Games\\Example\\game.exe",
+      "args": [],
+      "working_dir": "C:\\Games\\Example",
+      "enabled": false
+    }
+  ]
+}
