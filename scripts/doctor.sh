@@ -29,7 +29,8 @@ rm -f /tmp/storcloud-health.json
 if docker compose exec -T db pg_isready -U storcloud -d storcloud >/dev/null 2>&1; then ok "PostgreSQL accepting connections"; else warn "PostgreSQL not ready"; fi
 
 if [ -f .env ]; then ok ".env exists"; else warn ".env missing"; fi
-if [ -d storage/saves ]; then ok "save storage exists"; else warn "storage/saves missing"; fi
+if [ -d storage/saves ]; then ok "cloud save storage exists"; else warn "storage/saves missing"; fi
+if [ -d storage/roms ]; then ok "private ROM library storage exists"; else warn "storage/roms missing"; fi
 if [ -d runtime/games ]; then ok "browser game runtime exists"; else warn "runtime/games missing"; fi
 
 legacy=0
@@ -40,7 +41,7 @@ done
 
 echo
 echo "Disk usage:"
-du -sh runtime storage 2>/dev/null || true
+du -sh runtime storage storage/saves storage/roms 2>/dev/null || true
 
 echo
 echo "Containers:"
