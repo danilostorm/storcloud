@@ -85,3 +85,20 @@ class SaveState(Base):
     sha256: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class RomEntry(Base):
+    __tablename__ = "rom_entries"
+    __table_args__ = (UniqueConstraint("user_id", "sha256", name="uq_rom_user_sha256"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(180), index=True)
+    platform_id: Mapped[str] = mapped_column(String(40), index=True)
+    file_name: Mapped[str] = mapped_column(String(255))
+    storage_path: Mapped[str] = mapped_column(String(500))
+    size_bytes: Mapped[int] = mapped_column(BigInteger)
+    sha256: Mapped[str] = mapped_column(String(64), index=True)
+    favorite: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_played_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
