@@ -43,13 +43,20 @@ services:
       - ./runtime:/runtime:ro
       - ./storage:/storage
       - ./catalog:/catalog:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).read()"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+      start_period: 5s
 
   web:
     image: nginx:1.27-alpine
     container_name: storcloud-web
     restart: unless-stopped
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
       - "8080:80"
     volumes:
