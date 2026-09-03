@@ -1,69 +1,26 @@
 <!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>StorCloud PC Local</title>
-  <style>
-    :root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#070a12;color:#f7f8ff}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 15% 0,#1b2b58 0,#070a12 48%)}
-    header{height:70px;padding:0 5vw;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #ffffff14}.brand{font-weight:900}.back{color:#bec6ff;text-decoration:none}
-    main{max-width:1150px;margin:auto;padding:54px 5vw}.hero{max-width:820px}.hero h1{font-size:clamp(2.7rem,7vw,5.6rem);line-height:.94;margin:0 0 18px}.hero p{color:#aab2c9;line-height:1.7}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:32px}.card{border:1px solid #ffffff16;background:linear-gradient(145deg,#141c31,#0d111e);border-radius:20px;padding:22px;box-shadow:0 20px 65px #0005}.card h2{margin:0 0 10px}.muted{color:#929bb6;line-height:1.6}.status{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:#ffd27a;margin-bottom:8px}.status.ok{color:#79f4bd}.kv{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.kv div{background:#ffffff08;border:1px solid #ffffff10;border-radius:12px;padding:11px}.kv small{display:block;color:#808aa8;margin-bottom:4px}.btn{display:inline-block;margin-top:16px;padding:11px 14px;border-radius:12px;background:#6675ff;color:#fff;text-decoration:none;font-weight:800}.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:#02040a;border:1px solid #ffffff14;border-radius:12px;padding:13px;overflow:auto;color:#cdd4ed}.note{margin-top:22px;padding:16px 18px;border-radius:14px;border:1px solid #ffffff12;background:#ffffff08;color:#aab2c8;line-height:1.6}
-  </style>
-</head>
-<body>
-<header><div class="brand">StorCloud · PC Local</div><a class="back" href="/">← Biblioteca</a></header>
-<main>
-  <section class="hero">
-    <h1>O jogo roda no seu PC. O StorCloud só coordena.</h1>
-    <p>Para jogos Windows/Linux que não possuem port WebAssembly, o Local Agent inicia o executável permitido no computador do jogador. CPU, GPU, DirectX/Vulkan e áudio continuam locais — sem transformar a VM StorCloud em uma máquina de renderização.</p>
-  </section>
-
-  <section class="grid">
-    <article class="card">
-      <div id="agent-status" class="status">verificando agente</div>
-      <h2>StorCloud Local Agent</h2>
-      <p id="agent-text" class="muted">Procurando o agente em <b>127.0.0.1:47831</b>…</p>
-      <div class="kv" id="caps" hidden></div>
-    </article>
-
-    <article class="card">
-      <div class="status ok">arquitetura local-first</div>
-      <h2>Decisão automática</h2>
-      <p class="muted">O StorCloud prioriza Browser WASM/WebGPU. Quando isso não for possível, usa o Local Agent. Streaming remoto fica como último fallback.</p>
-      <div class="code">WASM disponível → navegador\nAgente compatível → PC local\nSem rota local → streaming fallback</div>
-    </article>
-
-    <article class="card">
-      <div class="status">alpha</div>
-      <h2>Segurança</h2>
-      <p class="muted">O agente não aceita comandos de shell nem caminhos enviados pelo site. Ele só lança IDs presentes numa lista local permitida e protegida por token.</p>
-    </article>
-  </section>
-
-  <div class="note">Se o agente aparecer offline mesmo estando aberto, configure <b>STORCLOUD_ORIGINS</b> com a origem exata do seu StorCloud, por exemplo <code>http://192.168.30.8:8080</code>.</div>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>StorCloud PC Local</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#070a12;color:#f7f8ff}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 15% 0,#1b2b58 0,#070a12 48%)}button,select{font:inherit}header{height:70px;padding:0 5vw;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #ffffff14}.brand{font-weight:900}.back{color:#bec6ff;text-decoration:none}main{max-width:1180px;margin:auto;padding:48px 5vw}.hero{max-width:830px}.hero h1{font-size:clamp(2.7rem,7vw,5.6rem);line-height:.94;margin:0 0 18px}.hero p,.muted{color:#aab2c9;line-height:1.7}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:30px}.card{border:1px solid #ffffff16;background:linear-gradient(145deg,#141c31,#0d111e);border-radius:20px;padding:22px;box-shadow:0 20px 65px #0005}.card h2{margin:0 0 10px}.status{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:#ffd27a;margin-bottom:8px}.status.ok{color:#79f4bd}.status.err{color:#ff9c9c}.kv{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.kv div{background:#ffffff08;border:1px solid #ffffff10;border-radius:12px;padding:11px}.kv small{display:block;color:#808aa8;margin-bottom:4px}.btn{border:0;display:inline-block;margin-top:10px;padding:11px 14px;border-radius:12px;background:#6675ff;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}.btn.secondary{background:#ffffff0d;border:1px solid #ffffff16}.btn:disabled{opacity:.45;cursor:not-allowed}.field{margin:14px 0}.field label{display:block;color:#919bb6;font-size:.78rem;margin-bottom:6px}.field select{width:100%;padding:11px;border-radius:11px;background:#080d18;color:#fff;border:1px solid #ffffff18}.game{padding:12px 0;border-top:1px solid #ffffff10}.game:first-child{border-top:0}.note{margin-top:22px;padding:16px 18px;border-radius:14px;border:1px solid #ffffff12;background:#ffffff08;color:#aab2c8;line-height:1.6}
+</style></head>
+<body><header><div class="brand">StorCloud · PC Local</div><div><a class="back" href="/account/">Conta</a> · <a class="back" href="/">Biblioteca</a></div></header><main>
+<section class="hero"><h1>O jogo roda no seu PC. O StorCloud autoriza.</h1><p>O Local Agent inicia apenas executáveis cadastrados na allowlist local. Cada clique em Jogar usa um ticket de lançamento de uso único emitido pela sua sessão StorCloud; a credencial permanente do dispositivo nunca vai para o navegador.</p></section>
+<section class="grid">
+<article class="card"><div id="agent-status" class="status">verificando agente</div><h2>Local Agent</h2><p id="agent-text" class="muted">Procurando em 127.0.0.1:47831…</p><div class="kv" id="caps" hidden></div></article>
+<article class="card"><div id="account-status" class="status">verificando conta</div><h2>Dispositivo StorCloud</h2><p class="muted">Pareie este PC na página Conta e selecione abaixo o dispositivo que corresponde a este agente.</p><div class="field"><label>PC pareado</label><select id="device"><option value="">Nenhum dispositivo</option></select></div><a class="btn secondary" href="/account/">Abrir Conta</a></article>
+<article class="card"><div class="status ok">GPU local</div><h2>Jogos permitidos</h2><div id="games"><span class="muted">Aguardando agente e conta…</span></div></article>
+</section>
+<div id="message" class="note">Fluxo: Browser WASM quando houver port → Local Agent para executáveis comuns → streaming somente como fallback.</div>
 </main>
 <script>
-async function detectAgent(){
-  const status=document.getElementById('agent-status');
-  const text=document.getElementById('agent-text');
-  const caps=document.getElementById('caps');
-  try{
-    const [health,info]=await Promise.all([
-      fetch('http://127.0.0.1:47831/health',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('health');return r.json()}),
-      fetch('http://127.0.0.1:47831/capabilities',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('caps');return r.json()})
-    ]);
-    status.textContent='agente online';status.classList.add('ok');
-    text.textContent=`${health.name} v${health.version} está disponível neste dispositivo.`;
-    caps.hidden=false;
-    caps.innerHTML=`<div><small>Sistema</small>${info.os}</div><div><small>Arquitetura</small>${info.arch}</div><div><small>CPUs lógicas</small>${info.logical_cpus}</div><div><small>Renderização</small>GPU local</div>`;
-  }catch(e){
-    status.textContent='agente não detectado';
-    text.innerHTML='Instale/inicie o StorCloud Local Agent neste computador para habilitar jogos PC nativos. O Retro e os jogos WASM continuam funcionando sem ele.';
-  }
-}
-detectAgent();
-</script>
-</body>
-</html>
+const api='/api',agent='http://127.0.0.1:47831';const $=id=>document.getElementById(id);let localGames=[],devices=[],logged=false,agentOnline=false;
+async function apiReq(path,options={}){const r=await fetch(api+path,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.detail||`HTTP ${r.status}`);return d}
+function note(text){$('message').textContent=text}
+async function boot(){await Promise.allSettled([detectAgent(),loadAccount()]);renderGames()}
+async function detectAgent(){try{const [health,info,catalog]=await Promise.all([fetch(agent+'/health',{cache:'no-store'}).then(r=>r.json()),fetch(agent+'/capabilities',{cache:'no-store'}).then(r=>r.json()),fetch(agent+'/games',{cache:'no-store'}).then(r=>r.json())]);agentOnline=true;localGames=catalog.games||[];$('agent-status').textContent=health.paired?'agente online · pareado':'agente online · não pareado';$('agent-status').classList.add('ok');$('agent-text').textContent=`${health.name} v${health.version} está ativo neste computador.`;$('caps').hidden=false;$('caps').innerHTML=`<div><small>Sistema</small>${info.os}</div><div><small>Arquitetura</small>${info.arch}</div><div><small>CPUs lógicas</small>${info.logical_cpus}</div><div><small>Renderização</small>GPU local</div>`}catch(e){$('agent-status').textContent='agente não detectado';$('agent-status').classList.add('err');$('agent-text').textContent='Instale ou abra o StorCloud Local Agent v0.2+ neste PC.'}}
+async function loadAccount(){try{const me=await apiReq('/auth/me');logged=true;$('account-status').textContent='logado como '+me.user.username;$('account-status').classList.add('ok');devices=(await apiReq('/devices')).items.filter(d=>!d.revoked);$('device').innerHTML='<option value="">Selecione o PC</option>'+devices.map(d=>`<option value="${d.id}">${d.name} · ${d.os}/${d.arch}${d.last_seen_at?' · online recentemente':''}</option>`).join('')}catch(e){logged=false;$('account-status').textContent='login necessário';$('account-status').classList.add('err')}}
+function renderGames(){if(!agentOnline){$('games').innerHTML='<span class="muted">Local Agent offline.</span>';return}if(!localGames.length){$('games').innerHTML='<span class="muted">Nenhum jogo cadastrado na allowlist do agente. Edite config/games.json no PC jogador.</span>';return}$('games').innerHTML=localGames.map(g=>`<div class="game"><b>${g.name}</b><br><button class="btn" onclick="launchGame('${g.id}')" ${logged?'':'disabled'}>Jogar neste PC</button></div>`).join('')}
+window.launchGame=async gameId=>{const deviceId=$('device').value;if(!logged){note('Entre na sua conta primeiro.');return}if(!deviceId){note('Selecione o PC pareado antes de jogar.');return}try{note('Gerando ticket seguro de lançamento…');const t=await apiReq(`/devices/${deviceId}/launch-ticket`,{method:'POST',body:JSON.stringify({game_id:gameId})});const r=await fetch(`${agent}/launch/${encodeURIComponent(gameId)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket:t.ticket})});if(!r.ok)throw new Error(await r.text());const result=await r.json();note(`Jogo iniciado localmente. PID ${result.pid}.`)}catch(e){note('Falha ao iniciar: '+e.message)}};
+boot();
+</script></body></html>
