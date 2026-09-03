@@ -7,7 +7,8 @@ use axum::{
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::{env, fs, net::SocketAddr, path::PathBuf, process::Command, sync::Arc};
+use std::{env, fs, net::SocketAddr, path::PathBuf, sync::Arc};
+use tokio::process::Command;
 use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -71,6 +72,7 @@ struct CapabilitiesResponse {
     execution: &'static str,
     arbitrary_commands: bool,
     pairing: &'static str,
+    process_tracking: bool,
 }
 
 #[derive(Deserialize)]
@@ -113,10 +115,22 @@ struct ConsumeLaunchRequest {
 }
 
 #[derive(Serialize)]
+struct AgentActivityStartRequest {
+    game_id: String,
+    title: String,
+}
+
+#[derive(Deserialize)]
+struct AgentActivityStartResponse {
+    session_id: String,
+}
+
+#[derive(Serialize)]
 struct LaunchResponse {
     ok: bool,
     game_id: String,
     pid: u32,
+    session_id: Option<String>,
 }
 
 fn default_enabled() -> bool {
@@ -186,6 +200,7 @@ async fn capabilities() -> Json<CapabilitiesResponse> {
         execution: "native-allowlist",
         arbitrary_commands: false,
         pairing: "server-ticket",
+        process_tracking: true,
     })
 }
 
@@ -296,14 +311,93 @@ async fn launch_game(
         command.current_dir(working_dir);
     }
 
-    match command.spawn() {
-        Ok(child) => (
-            StatusCode::OK,
-            Json(LaunchResponse { ok: true, game_id: game.id, pid: child.id() }),
-        )
-            .into_response(),
-        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, format!("launch failed: {error}")).into_response(),
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(error) => return (StatusCode::INTERNAL_SERVER_ERROR, format!("launch failed: {error}")).into_response(),
+    };
+    let pid = child.id().unwrap_or(0);
+
+    let session_id = start_agent_activity(&state.client, &credentials, &game.id, &game.name).await.ok();
+    if let Some(session_id_for_task) = session_id.clone() {
+        let client = state.client.clone();
+        let credentials_for_task = credentials.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+            interval.tick().await;
+            loop {
+                tokio::select! {
+                    result = child.wait() => {
+                        if let Err(error) = result {
+                            eprintln!("[StorCloud Agent] process wait failed: {error}");
+                        }
+                        let _ = send_activity_end(&client, &credentials_for_task, &session_id_for_task).await;
+                        break;
+                    }
+                    _ = interval.tick() => {
+                        let _ = send_activity_heartbeat(&client, &credentials_for_task, &session_id_for_task).await;
+                    }
+                }
+            }
+        });
+    } else {
+        tokio::spawn(async move {
+            let _ = child.wait().await;
+        });
     }
+
+    (
+        StatusCode::OK,
+        Json(LaunchResponse { ok: true, game_id: game.id, pid, session_id }),
+    )
+        .into_response()
+}
+
+async fn start_agent_activity(
+    client: &Client,
+    credentials: &DeviceCredentials,
+    game_id: &str,
+    title: &str,
+) -> Result<String, String> {
+    let response = client
+        .post(format!("{}/api/agent/activity/start", credentials.server_url))
+        .bearer_auth(&credentials.device_token)
+        .json(&AgentActivityStartRequest { game_id: game_id.to_string(), title: title.to_string() })
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("activity start rejected: {}", response.status()));
+    }
+    let body: AgentActivityStartResponse = response.json().await.map_err(|error| error.to_string())?;
+    Ok(body.session_id)
+}
+
+async fn send_activity_heartbeat(
+    client: &Client,
+    credentials: &DeviceCredentials,
+    session_id: &str,
+) -> Result<(), String> {
+    let response = client
+        .post(format!("{}/api/agent/activity/{session_id}/heartbeat", credentials.server_url))
+        .bearer_auth(&credentials.device_token)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if response.status().is_success() { Ok(()) } else { Err(format!("activity heartbeat rejected: {}", response.status())) }
+}
+
+async fn send_activity_end(
+    client: &Client,
+    credentials: &DeviceCredentials,
+    session_id: &str,
+) -> Result<(), String> {
+    let response = client
+        .post(format!("{}/api/agent/activity/{session_id}/end", credentials.server_url))
+        .bearer_auth(&credentials.device_token)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if response.status().is_success() { Ok(()) } else { Err(format!("activity end rejected: {}", response.status())) }
 }
 
 async fn send_heartbeat(state: &AppState) -> Result<(), String> {
