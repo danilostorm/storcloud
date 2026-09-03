@@ -2,7 +2,7 @@ name: Web CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, pixel-plates-release]
     paths:
       - 'frontend/**'
       - 'update.sh'
@@ -24,34 +24,38 @@ jobs:
       - name: Validate Nginx configuration
         run: |
           docker run --rm -v "$PWD/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:1.27-alpine nginx -t
-      - name: Validate console base assets
+      - name: Validate approved pixel plates
         run: |
-          test -f frontend/assets/console.css
-          test -f frontend/assets/spatial-nav.js
-          test -f frontend/assets/art/home-scene.svg
-          grep -q 'data:image/webp;base64' frontend/assets/art/home-scene.svg
-          grep -q 'mock-hero' frontend/index.html
-      - name: Validate console pages and JavaScript syntax
+          test -s frontend/assets/mockups/home.jpg
+          test -s frontend/assets/mockups/catalog.jpg
+          test -s frontend/assets/mockups/library.jpg
+          test -s frontend/assets/mockups/retro.jpg
+          test -s frontend/assets/mockups/pc.jpg
+          test -s frontend/assets/mockups/achievements.jpg
+          test -s frontend/assets/mockups/account.jpg
+          test -s frontend/assets/mockups/admin.jpg
+          file frontend/assets/mockups/*.jpg | tee /tmp/plates.txt
+          test "$(grep -c 'JPEG image data' /tmp/plates.txt)" -eq 8
+      - name: Validate pixel UI files
         run: |
-          node --check frontend/assets/spatial-nav.js
+          test -s frontend/assets/pixel.css
+          node --check frontend/assets/pixel.js
           python3 - <<'PY'
           from pathlib import Path
-          import re, subprocess
-          pages = [
-              Path('frontend/index.html'), Path('frontend/catalog/index.html'), Path('frontend/library/index.html'),
-              Path('frontend/retro/index.html'), Path('frontend/pc/index.html'), Path('frontend/achievements/index.html'),
-              Path('frontend/account/index.html'), Path('frontend/admin/index.html'),
-          ]
-          for page in pages:
-              if not page.exists():
-                  raise SystemExit(f'missing page: {page}')
+          pages = {
+              Path('frontend/index.html'): 'home.jpg',
+              Path('frontend/catalog/index.html'): 'catalog.jpg',
+              Path('frontend/library/index.html'): 'library.jpg',
+              Path('frontend/retro/index.html'): 'retro.jpg',
+              Path('frontend/pc/index.html'): 'pc.jpg',
+              Path('frontend/achievements/index.html'): 'achievements.jpg',
+              Path('frontend/account/index.html'): 'account.jpg',
+              Path('frontend/admin/index.html'): 'admin.jpg',
+          }
+          for page, plate in pages.items():
               html = page.read_text(encoding='utf-8')
-              blocks = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', html, flags=re.S | re.I)
-              for index, code in enumerate(blocks):
-                  if not code.strip():
-                      continue
-                  code = re.sub(r'^\s*import\s+.+?;\s*$', '', code, flags=re.M)
-                  target = Path('/tmp') / f'{page.parent.name or "home"}-{index}.js'
-                  target.write_text(code, encoding='utf-8')
-                  subprocess.run(['node', '--check', str(target)], check=True)
+              assert '/assets/pixel.css' in html, page
+              assert '/assets/pixel.js' in html, page
+              assert f'/assets/mockups/{plate}' in html, page
+              assert 'id="live"' in html, page
           PY
