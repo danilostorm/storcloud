@@ -6,7 +6,7 @@ os.environ.setdefault("STORCLOUD_COOKIE_SECURE", "false")
 
 from fastapi.testclient import TestClient
 
-from main import app
+from app import app
 
 
 def test_full_control_plane_smoke():
@@ -29,6 +29,18 @@ def test_full_control_plane_smoke():
         me = client.get("/auth/me")
         assert me.status_code == 200
         assert me.json()["user"]["username"] == "admin"
+
+        rom = client.post(
+            "/library/roms",
+            data={"platform_id": "nes", "title": "CI Homebrew"},
+            files={"file": ("ci-homebrew.nes", io.BytesIO(b"NES\x1a" + b"\0" * 64), "application/octet-stream")},
+        )
+        assert rom.status_code == 200, rom.text
+        rom_id = rom.json()["item"]["id"]
+        assert client.get("/library/roms").json()["count"] == 1
+        rom_file = client.get(f"/library/roms/{rom_id}/file")
+        assert rom_file.status_code == 200
+        assert rom_file.content.startswith(b"NES\x1a")
 
         pair_ticket = client.post("/devices/pair-ticket", json={})
         assert pair_ticket.status_code == 200
