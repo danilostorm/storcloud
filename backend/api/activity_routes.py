@@ -58,11 +58,13 @@ def deep_link(row: PlaySession) -> str:
     if row.mode == "retro-wasm" and row.game_key.startswith("rom-"):
         return f"/retro/?rom={row.game_key[4:]}"
     if row.mode == "local-native":
-        return "/pc/"
+        return f"/pc/?game={row.game_key}"
     if row.mode == "browser-wasm":
         if row.game_key == "doom-wasm":
             return "/games/doom-wasm/"
-        return "/"
+        return "/catalog/"
+    if row.mode == "remote-stream":
+        return f"/stream/?game={row.game_key}"
     return "/"
 
 
