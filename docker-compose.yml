@@ -20,5 +20,4 @@ services:
     volumes:
       - ./frontend:/srv/storcloud/frontend:ro
       - ./runtime/games:/srv/storcloud/games:ro
-      - ./runtime/retro:/srv/storcloud/retro:ro
       - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
