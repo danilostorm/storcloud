@@ -26,6 +26,13 @@ else
 fi
 rm -f /tmp/storcloud-health.json
 
+if curl -fsS http://127.0.0.1:8080/api/healthz >/tmp/storcloud-web-health.json 2>/dev/null; then
+  ok "web gateway -> API reachable"
+else
+  warn "web gateway -> API unavailable"
+fi
+rm -f /tmp/storcloud-web-health.json
+
 if curl -fsS http://127.0.0.1:8000/catalog >/tmp/storcloud-catalog.json 2>/dev/null; then
   ok "hybrid catalog endpoint reachable"
   python3 - <<'PY' 2>/dev/null || true
@@ -41,7 +48,6 @@ rm -f /tmp/storcloud-catalog.json
 
 if curl -fsS http://127.0.0.1:8000/streaming/status >/tmp/storcloud-streaming.json 2>/dev/null; then
   ok "streaming fallback status endpoint reachable"
-  cat /tmp/storcloud-streaming.json; echo
 else
   warn "streaming fallback status endpoint unavailable"
 fi
@@ -53,6 +59,7 @@ if [ -f .env ]; then ok ".env exists"; else warn ".env missing"; fi
 if [ -f catalog/games.json ]; then ok "catalog/games.json exists"; else warn "catalog/games.json missing"; fi
 if [ -d storage/saves ]; then ok "cloud save storage exists"; else warn "storage/saves missing"; fi
 if [ -d storage/roms ]; then ok "private ROM library storage exists"; else warn "storage/roms missing"; fi
+if [ -d storage/media ]; then ok "retro artwork cache exists"; else warn "storage/media missing"; fi
 if [ -d runtime/games ]; then ok "browser game runtime exists"; else warn "runtime/games missing"; fi
 
 legacy=0
@@ -63,7 +70,7 @@ done
 
 echo
 echo "Disk usage:"
-du -sh runtime storage storage/saves storage/roms 2>/dev/null || true
+du -sh runtime storage storage/saves storage/roms storage/media 2>/dev/null || true
 
 echo
 echo "Containers:"
