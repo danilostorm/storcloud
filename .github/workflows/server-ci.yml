@@ -5,12 +5,14 @@ on:
     branches: [main]
     paths:
       - 'backend/api/**'
+      - 'catalog/**'
       - 'docker-compose.yml'
       - 'scripts/bootstrap-env.sh'
       - '.github/workflows/server-ci.yml'
   pull_request:
     paths:
       - 'backend/api/**'
+      - 'catalog/**'
       - 'docker-compose.yml'
       - 'scripts/bootstrap-env.sh'
       - '.github/workflows/server-ci.yml'
@@ -38,6 +40,8 @@ jobs:
       STORCLOUD_COOKIE_SECURE: 'false'
       STORCLOUD_SAVE_ROOT: ${{ github.workspace }}/.tmp-saves
       STORCLOUD_ROM_ROOT: ${{ github.workspace }}/.tmp-roms
+      STORCLOUD_CATALOG_PATH: ${{ github.workspace }}/catalog/games.json
+      STORCLOUD_STREAMING_ENABLED: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -54,6 +58,8 @@ jobs:
       - name: Compile API
         working-directory: backend/api
         run: python -m compileall -q .
+      - name: Validate catalog JSON
+        run: python -m json.tool catalog/games.json >/dev/null
       - name: Run control-plane smoke test
         working-directory: backend/api
         run: pytest -q test_smoke.py
