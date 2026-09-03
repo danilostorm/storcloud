@@ -45,4 +45,4 @@ else
 fi
 
 chmod 600 "$ENV_FILE" 2>/dev/null || true
-mkdir -p "$ROOT_DIR/storage/saves" "$ROOT_DIR/storage/roms"
+mkdir -p "$ROOT_DIR/storage/saves" "$ROOT_DIR/storage/roms" "$ROOT_DIR/storage/media"
