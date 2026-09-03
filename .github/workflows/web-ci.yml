@@ -26,26 +26,30 @@ jobs:
           docker run --rm \
             -v "$PWD/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
             nginx:1.27-alpine nginx -t
-      - name: Validate required launcher files
+      - name: Validate approved console assets and pages
         run: |
           for f in \
             frontend/index.html \
             frontend/catalog/index.html \
             frontend/library/index.html \
-            frontend/account/index.html \
-            frontend/admin/index.html \
+            frontend/retro/index.html \
             frontend/pc/index.html \
             frontend/achievements/index.html \
+            frontend/account/index.html \
+            frontend/admin/index.html \
             frontend/assets/console.css \
-            frontend/assets/spatial-nav.js; do
-            test -f "$f"
-          done
+            frontend/assets/spatial-nav.js \
+            frontend/assets/art/home-scene.svg \
+            frontend/assets/art/account-scene.svg \
+            frontend/assets/art/pc-scene.svg \
+            frontend/assets/art/achievements-scene.svg; do test -f "$f"; done
           grep -q 'healthz' frontend/index.html
-          grep -q 'claim-admin' frontend/account/index.html
+          grep -q 'detailText' frontend/account/index.html
           grep -q 'scanAll' frontend/library/index.html
+          grep -q 'player-menu' frontend/retro/index.html
           grep -q 'resolver 127.0.0.11' frontend/nginx.conf
           grep -q '8080/api/healthz' update.sh
-      - name: Validate launcher JavaScript syntax
+      - name: Validate console JavaScript syntax
         run: |
           node --check frontend/assets/spatial-nav.js
           python3 - <<'PY'
@@ -55,20 +59,24 @@ jobs:
               Path('frontend/index.html'),
               Path('frontend/catalog/index.html'),
               Path('frontend/library/index.html'),
-              Path('frontend/account/index.html'),
-              Path('frontend/admin/index.html'),
+              Path('frontend/retro/index.html'),
               Path('frontend/pc/index.html'),
               Path('frontend/achievements/index.html'),
+              Path('frontend/account/index.html'),
+              Path('frontend/admin/index.html'),
           ]
+          pattern = re.compile(r'<script(?P<attrs>[^>]*)>(?P<code>.*?)</script>', flags=re.S | re.I)
           for page in pages:
               html = page.read_text(encoding='utf-8')
-              blocks = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', html, flags=re.S | re.I)
+              blocks = list(pattern.finditer(html))
               if not blocks:
                   raise SystemExit(f'no script found in {page}')
-              for index, code in enumerate(blocks):
+              for index, block in enumerate(blocks):
+                  code = block.group('code')
                   if not code.strip():
                       continue
-                  target = Path('/tmp') / f'{page.parent.name or "home"}-{index}.js'
+                  is_module = 'type="module"' in block.group('attrs').lower() or "type='module'" in block.group('attrs').lower()
+                  target = Path('/tmp') / f'{page.parent.name or "home"}-{index}.{"mjs" if is_module else "js"}'
                   target.write_text(code, encoding='utf-8')
                   subprocess.run(['node', '--check', str(target)], check=True)
           PY
