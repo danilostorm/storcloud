@@ -6,6 +6,10 @@ cd "$(dirname "$0")"
 echo "[StorCloud] Pulling latest code..."
 git pull --ff-only
 
+echo "[StorCloud] Preparing local browser games..."
+chmod +x scripts/bootstrap-games.sh
+./scripts/bootstrap-games.sh
+
 echo "[StorCloud] Building and starting services..."
 docker compose up -d --build --remove-orphans
 
