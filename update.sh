@@ -9,8 +9,8 @@ git pull --ff-only
 echo "[StorCloud] Preparing local browser games..."
 bash scripts/bootstrap-games.sh
 
-echo "[StorCloud] Preparing Retro WASM engines..."
-bash scripts/bootstrap-retro.sh
+echo "[StorCloud] Retro Library uses the unified Nostalgist/RetroArch WASM player."
+echo "[StorCloud] Separate emulator pages are no longer built."
 
 echo "[StorCloud] Building and starting services..."
 docker compose up -d --build --remove-orphans
