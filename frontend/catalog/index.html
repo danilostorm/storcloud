@@ -1,4 +1,71 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>StorCloud Catálogo Híbrido</title><style>:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#070a12;color:#f7f8ff}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 18% 0,#19305a 0,#070a12 48%)}header{height:70px;padding:0 5vw;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #ffffff14}.brand{font-weight:900}.back{color:#bec7ff;text-decoration:none}main{max-width:1300px;margin:auto;padding:44px 5vw 70px}h1{font-size:clamp(2.7rem,7vw,5.4rem);line-height:.95;margin:.1em 0}.muted{color:#98a2bd;line-height:1.65}.caps{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0 28px}.pill{padding:8px 10px;border:1px solid #ffffff15;background:#ffffff08;border-radius:999px;font-size:.78rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}.card{padding:20px;border:1px solid #ffffff14;background:linear-gradient(145deg,#141b2d,#0d111d);border-radius:18px;display:flex;flex-direction:column;justify-content:space-between;min-height:280px}.mode{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#80f2bd}.mode.none{color:#ffae85}.btn{display:block;text-align:center;text-decoration:none;margin-top:16px;padding:11px 13px;border-radius:11px;background:#6675ff;color:#fff;font-weight:800}.btn.disabled{opacity:.4;pointer-events:none}.route{margin-top:12px;padding:10px;border-radius:11px;background:#ffffff07;border:1px solid #ffffff0e;font-size:.82rem;color:#aab3cc}</style></head><body><header><div class="brand">StorCloud · Catálogo</div><a class="back" href="/">← Início</a></header><main><h1>Uma biblioteca, várias rotas.</h1><p class="muted">O StorCloud avalia o dispositivo e escolhe Browser WASM, Retro WASM, PC Local ou streaming remoto conforme a prioridade do manifest.</p><div id="caps" class="caps"><span class="pill">Detectando…</span></div><section id="grid" class="grid"></section></main><script>
-const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let caps={wasm:typeof WebAssembly==='object',webgpu:!!navigator.gpu,local_agent:false,remote_stream:false};async function detect(){try{const r=await fetch('http://127.0.0.1:47831/health',{cache:'no-store'});caps.local_agent=r.ok}catch{}try{const s=await fetch('/api/streaming/status').then(r=>r.json());caps.remote_stream=!!s.configured}catch{}$('caps').innerHTML=`<span class="pill">WASM: ${caps.wasm?'sim':'não'}</span><span class="pill">WebGPU: ${caps.webgpu?'sim':'não'}</span><span class="pill">Local Agent: ${caps.local_agent?'online':'offline'}</span><span class="pill">Streaming: ${caps.remote_stream?'configurado':'desativado'}</span>`}async function load(){await detect();const data=await fetch('/api/catalog').then(r=>r.json());const cards=[];for(const game of data.items){const r=await fetch(`/api/catalog/${encodeURIComponent(game.id)}/resolve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(caps)});const d=await r.json();const x=d.decision;cards.push(`<article class="card"><div><span class="mode ${x?'':'none'}">${x?esc(x.mode):'sem rota'}</span><h2>${esc(game.title)}</h2><p class="muted">${esc(game.description||'')}</p>${x?`<div class="route">Rota escolhida: <b>${esc(x.mode)}</b><br>Prioridade: ${x.priority}</div>`:`<div class="route">${esc(d.reason||'Nenhuma rota disponível.')}</div>`}</div><a class="btn ${x&&x.launch_url?'':'disabled'}" href="${x?.launch_url||'#'}">${x?'Abrir pela melhor rota':'Indisponível'}</a></article>`)}$('grid').innerHTML=cards.join('')}load().catch(e=>$('grid').innerHTML=`<p class="muted">Falha: ${esc(e.message)}</p>`);
-</script></body></html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>StorCloud · Explorar</title>
+  <link rel="stylesheet" href="/assets/storcloud.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand-mark" href="/">S</a>
+    <nav class="side-nav">
+      <a class="side-link" href="/"><span class="ico">⌂</span><span>Início</span></a>
+      <a class="side-link active" href="/catalog/"><span class="ico">◫</span><span>Explorar</span></a>
+      <a class="side-link" href="/library/"><span class="ico">▦</span><span>Biblioteca</span></a>
+      <a class="side-link" href="/pc/"><span class="ico">▣</span><span>PC</span></a>
+      <a class="side-link" href="/achievements/"><span class="ico">◆</span><span>Conquistas</span></a>
+    </nav>
+    <div class="sidebar-bottom"><a class="side-link" href="/account/"><span class="ico">●</span><span>Conta</span></a></div>
+  </aside>
+  <div class="content">
+    <header class="topbar">
+      <div class="page-title">EXPLORAR JOGOS</div>
+      <div class="searchbox"><span>⌕</span><input id="search" placeholder="Buscar no catálogo"></div>
+      <div class="top-spacer"></div>
+      <div id="caps" class="caps"><span class="cap">Detectando hardware…</span></div>
+    </header>
+    <main class="main">
+      <section class="hero-game" style="min-height:310px">
+        <div class="hero-copy" style="padding-top:38px;padding-bottom:38px">
+          <div class="eyebrow">SMART ROUTING</div>
+          <h1 style="font-size:clamp(38px,4.5vw,66px)">Escolha o jogo.<br>Não a tecnologia.</h1>
+          <p>O StorCloud verifica seu navegador, Local Agent e fallback remoto e escolhe automaticamente a melhor rota disponível.</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="filterbar">
+          <button class="filter active" data-filter="all">Todos</button>
+          <button class="filter" data-filter="retro">Retro</button>
+          <button class="filter" data-filter="pc">PC</button>
+          <button class="filter" data-filter="ready">Prontos</button>
+        </div>
+        <div id="grid" class="game-row"><div class="empty-state">Analisando as melhores rotas para este dispositivo…</div></div>
+      </section>
+    </main>
+  </div>
+</div>
+<script>
+const api='/api',$=id=>document.getElementById(id);let games=[],decisions=new Map(),filter='all';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const art=id=>id.includes('doom')?'art-doom':id.includes('retro')?'art-retro':id.includes('pc-local')?'art-pc':id.includes('quake')?'art-quake':'art-default';
+const symbol=id=>id.includes('doom')?'DOOM':id.includes('retro')?'8BIT':id.includes('pc-local')?'PC':id.includes('quake')?'Q':'PLAY';
+let caps={wasm:typeof WebAssembly==='object',webgpu:!!navigator.gpu,local_agent:false,remote_stream:false};
+async function detect(){
+  try{const r=await fetch('http://127.0.0.1:47831/health',{cache:'no-store'});caps.local_agent=r.ok}catch{}
+  try{const s=await fetch(api+'/streaming/status',{cache:'no-store'});if(s.ok)caps.remote_stream=!!(await s.json()).configured}catch{}
+  $('caps').innerHTML=`<span class="cap ${caps.wasm?'ok':''}">WASM ${caps.wasm?'ON':'OFF'}</span><span class="cap ${caps.webgpu?'ok':''}">WebGPU ${caps.webgpu?'ON':'OFF'}</span><span class="cap ${caps.local_agent?'ok':'warn'}">Agent ${caps.local_agent?'ON':'OFF'}</span><span class="cap ${caps.remote_stream?'ok':''}">Stream ${caps.remote_stream?'ON':'OFF'}</span>`;
+}
+async function load(){
+  await detect();const r=await fetch(api+'/catalog',{cache:'no-store'});if(!r.ok)throw new Error('Catálogo HTTP '+r.status);const data=await r.json();games=data.items||[];
+  await Promise.all(games.map(async g=>{const rr=await fetch(`${api}/catalog/${encodeURIComponent(g.id)}/resolve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(caps)});if(rr.ok)decisions.set(g.id,(await rr.json()).decision||null)}));render();
+}
+function render(){
+  const q=$('search').value.trim().toLowerCase();const list=games.filter(g=>(!q||(g.title+' '+(g.description||'')).toLowerCase().includes(q))&&(filter==='all'||filter==='ready'&&!!decisions.get(g.id)||g.category===filter));
+  $('grid').innerHTML=list.length?list.map(g=>{const d=decisions.get(g.id),enabled=!!d;return `<a class="game-card" href="${enabled&&d.launch_url?esc(d.launch_url):'#'}" ${enabled&&d.launch_url?'':'onclick="return false"'}><div class="game-art ${art(g.id)}"><span class="game-symbol">${symbol(g.id)}</span><span class="game-badge">${esc(g.category||'game')}</span></div><div class="game-info"><h3>${esc(g.title)}</h3><p>${esc(g.description||'')}</p><span class="route-pill ${enabled?'':'off'}">${enabled?esc(d.mode):'Sem rota disponível'}</span></div></a>`}).join(''):'<div class="empty-state">Nenhum jogo corresponde a este filtro.</div>';
+}
+$('search').oninput=render;document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');filter=b.dataset.filter;render()});
+load().catch(e=>$('grid').innerHTML=`<div class="empty-state">Falha ao carregar catálogo: ${esc(e.message)}</div>`);
+</script>
+</body></html>
