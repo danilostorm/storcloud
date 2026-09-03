@@ -1,8 +1,8 @@
 # StorCloud
 
-StorCloud is a **local-first multi-user gaming platform**. The server organizes accounts, devices, saves, libraries and launch authorization, while games should render on the player's own hardware whenever possible.
+StorCloud is a **local-first multi-user gaming platform**. The server organizes accounts, private libraries, devices, saves and launch authorization, while games should render on the player's own hardware whenever possible.
 
-## v0.6 Multiuser Control Plane
+## v0.7 Personal Library
 
 Execution order:
 
@@ -20,18 +20,25 @@ An arbitrary Windows `.exe` is not generically converted to WebAssembly. Native 
 - multi-user registration/login
 - first-admin setup token
 - HttpOnly server sessions
+- private ROM library per user
+- SHA-256 duplicate detection for uploaded ROMs
+- favorite and last-played metadata
+- up to 2 GiB per ROM by default, configurable
+- direct launch from **Minha Biblioteca** into the unified Retro player
+- stable per-library-game cloud-save key
+- cloud save-state storage per user/game/slot
+- local-file Retro mode without server upload
 - user/device model
 - 10-minute Local Agent pairing tickets
 - per-device credentials stored only by the Local Agent
 - 45-second one-time PC launch tickets
 - Local Agent heartbeat/device presence
-- cloud save-state storage per user/game/slot
-- unified Retro Library with cloud-save fallback to local files
 - Doom / FreeDoom browser-WASM package bootstrap
 - PC Local launch UI
 - Rust Local Agent v0.2
 - Windows/Linux Local Agent CI builds
-- API/PostgreSQL integration smoke test
+- API/PostgreSQL integration smoke test, including private ROM upload/download
+- server doctor and database/storage backup scripts
 - automatic cleanup of old separate-emulator payloads
 
 ## Update the Ubuntu server
@@ -42,20 +49,21 @@ git pull
 bash update.sh
 ```
 
-`update.sh` creates `.env` on first run with a random PostgreSQL password and first-admin setup token, cleans legacy retro payloads, prepares browser games, rebuilds containers and checks API/database health.
+`update.sh` creates `.env` on first run with a random PostgreSQL password and first-admin setup token, creates save/ROM storage, cleans legacy retro payloads, prepares browser games, rebuilds containers and checks API/database health.
 
 Open:
 
 - Launcher: `http://SERVER_IP:8080`
+- Minha Biblioteca: `http://SERVER_IP:8080/library/`
 - Account: `http://SERVER_IP:8080/account/`
-- Retro Library: `http://SERVER_IP:8080/retro/`
+- Retro player: `http://SERVER_IP:8080/retro/`
 - PC Local: `http://SERVER_IP:8080/pc/`
 - API: `http://SERVER_IP:8000`
 - API docs: `http://SERVER_IP:8000/docs`
 
 ## First administrator
 
-After the first v0.6 update, read the generated setup token on the VM:
+After the first multi-user update, read the generated setup token on the VM:
 
 ```bash
 grep '^STORCLOUD_SETUP_TOKEN=' /opt/storcloud/.env
@@ -63,29 +71,75 @@ grep '^STORCLOUD_SETUP_TOKEN=' /opt/storcloud/.env
 
 Open `/account/`, create the first account and provide that token. Only the first account can become admin this way.
 
+## Personal Retro library
+
+Log in and open `/library/`.
+
+The current library supports:
+
+- NES: `.nes`
+- SNES: `.sfc`, `.smc`
+- Game Boy / GBC: `.gb`, `.gbc`
+- Game Boy Advance: `.gba`
+- Mega Drive / Genesis: `.md`, `.gen`
+- Master System: `.sms`
+- Game Gear: `.gg`
+- Arcade / Neo Geo: `.zip`
+- N64 experimental: `.z64`, `.n64`, `.v64`
+- PS1 experimental: `.chd`
+
+The user provides their own files. StorCloud does not bundle commercial ROMs, BIOS images or proprietary game data.
+
+Library files are private to the authenticated account. The API stores them under `storage/roms/<user-id>/`; metadata and SHA-256 hashes live in PostgreSQL.
+
+Clicking **Jogar** opens `/retro/?rom=<id>`. The unified player uses the authenticated ROM URL directly instead of creating a second full copy in browser JavaScript memory.
+
 ## Persistent data
 
 - PostgreSQL: Docker volume `storcloud-postgres`
-- save-state files: `/opt/storcloud/storage/saves`
+- cloud save files: `/opt/storcloud/storage/saves`
+- private ROM library: `/opt/storcloud/storage/roms`
 - browser game payloads: `/opt/storcloud/runtime/games`
 - server secrets: `/opt/storcloud/.env` (ignored by Git)
 
 Do not delete the PostgreSQL volume or `storage/` when updating.
+
+## Operations
+
+Health check:
+
+```bash
+cd /opt/storcloud
+bash scripts/doctor.sh
+```
+
+Backup database + saves + private ROM library:
+
+```bash
+cd /opt/storcloud
+bash scripts/backup.sh
+```
+
+Backups are written to `backups/` by default and include SHA-256 checksums.
 
 ## Repository layout
 
 ```text
 backend/api/                  FastAPI multi-user control plane
 frontend/                     web launcher
-frontend/account/             login, users, device pairing and save dashboard
+frontend/account/             login, device pairing and save dashboard
+frontend/library/             private per-user Retro collection
 frontend/retro/               unified Retro player + cloud saves
 frontend/pc/                  Local Agent pairing/launch experience
 local-agent/                  native Rust companion for PC games
 runtime/                      generated/downloaded browser payloads; not committed
-storage/                      persistent save files; not committed
-scripts/bootstrap-env.sh      generates persistent server secrets
+storage/saves/                persistent cloud save files
+storage/roms/                 persistent private ROM library
+scripts/bootstrap-env.sh      generates persistent server secrets/storage
 scripts/bootstrap-games.sh    browser game package installer
 scripts/cleanup-legacy-retro.sh
+scripts/doctor.sh
+scripts/backup.sh
 update.sh                     Ubuntu update/deploy entrypoint
 docs/                         architecture and operations documentation
 ```
@@ -94,11 +148,7 @@ docs/                         architecture and operations documentation
 
 The user chooses a game, not an emulator. StorCloud maps the platform to the appropriate RetroArch WebAssembly core internally.
 
-Initial mapping includes NES, SNES, GB/GBC, GBA, Mega Drive, Master System, Game Gear and Arcade/Neo Geo; N64 and PS1 remain experimental.
-
-ROMs, BIOS files and proprietary commercial game assets are not bundled.
-
-With an authenticated StorCloud account, the unified player saves state to a per-user `auto` slot. Without login it falls back to local state export/import.
+With an authenticated account, library games use a stable `rom-<id>` cloud-save key. Without login or when using a local-only ROM, the player can still export/import states locally.
 
 ## PC Local Agent
 
