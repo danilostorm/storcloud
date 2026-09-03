@@ -26,9 +26,31 @@ else
 fi
 rm -f /tmp/storcloud-health.json
 
+if curl -fsS http://127.0.0.1:8000/catalog >/tmp/storcloud-catalog.json 2>/dev/null; then
+  ok "hybrid catalog endpoint reachable"
+  python3 - <<'PY' 2>/dev/null || true
+import json
+p='/tmp/storcloud-catalog.json'
+d=json.load(open(p))
+print(f"Catalog items: {d.get('count', 0)}")
+PY
+else
+  warn "hybrid catalog endpoint unavailable"
+fi
+rm -f /tmp/storcloud-catalog.json
+
+if curl -fsS http://127.0.0.1:8000/streaming/status >/tmp/storcloud-streaming.json 2>/dev/null; then
+  ok "streaming fallback status endpoint reachable"
+  cat /tmp/storcloud-streaming.json; echo
+else
+  warn "streaming fallback status endpoint unavailable"
+fi
+rm -f /tmp/storcloud-streaming.json
+
 if docker compose exec -T db pg_isready -U storcloud -d storcloud >/dev/null 2>&1; then ok "PostgreSQL accepting connections"; else warn "PostgreSQL not ready"; fi
 
 if [ -f .env ]; then ok ".env exists"; else warn ".env missing"; fi
+if [ -f catalog/games.json ]; then ok "catalog/games.json exists"; else warn "catalog/games.json missing"; fi
 if [ -d storage/saves ]; then ok "cloud save storage exists"; else warn "storage/saves missing"; fi
 if [ -d storage/roms ]; then ok "private ROM library storage exists"; else warn "storage/roms missing"; fi
 if [ -d runtime/games ]; then ok "browser game runtime exists"; else warn "runtime/games missing"; fi
