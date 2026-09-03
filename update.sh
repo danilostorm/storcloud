@@ -9,10 +9,13 @@ git pull --ff-only
 echo "[StorCloud] Preparing local browser games..."
 bash scripts/bootstrap-games.sh
 
+echo "[StorCloud] Preparing Retro WASM engines..."
+bash scripts/bootstrap-retro.sh
+
 echo "[StorCloud] Building and starting services..."
 docker compose up -d --build --remove-orphans
 
 echo "[StorCloud] Services:"
 docker compose ps
 
-echo "[StorCloud] Done. Web: :8080 | API: :8000 | Docs: :8000/docs"
+echo "[StorCloud] Done. Web: :8080 | Retro: :8080/retro/ | API: :8000 | Docs: :8000/docs"
