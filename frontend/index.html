@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>StorCloud</title>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#080b14;color:#f7f8ff}
+    *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at top,#18213d 0,#080b14 44%);min-height:100vh}
+    header{padding:28px 5vw;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ffffff14}
+    .brand{font-weight:800;font-size:1.4rem;letter-spacing:.3px}.badge{font-size:.75rem;padding:6px 10px;border:1px solid #6d7fff66;border-radius:999px;color:#b8c0ff}
+    main{padding:52px 5vw;max-width:1400px;margin:auto}.hero{max-width:760px;margin-bottom:42px}.hero h1{font-size:clamp(2.3rem,6vw,5.8rem);line-height:.92;margin:0 0 18px}.hero p{color:#a8aec4;font-size:1.05rem;line-height:1.7}
+    .status{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.pill{background:#ffffff0b;border:1px solid #ffffff14;border-radius:12px;padding:9px 12px;color:#cbd0e5}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}.card{min-height:220px;background:linear-gradient(145deg,#141a2c,#0e1220);border:1px solid #ffffff14;border-radius:20px;padding:22px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 18px 60px #0005}.card h3{margin:8px 0 8px;font-size:1.25rem}.meta{color:#8991ac;font-size:.9rem}.state{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:#9aa6ff}.btn{margin-top:18px;border:0;border-radius:12px;padding:12px 14px;font-weight:700;background:#6675ff;color:#fff;cursor:pointer}.btn:disabled{opacity:.45;cursor:not-allowed}.error{color:#ff9f9f}
+  </style>
+</head>
+<body>
+  <header><div class="brand">StorCloud</div><div class="badge">v0.1 Foundation</div></header>
+  <main>
+    <section class="hero">
+      <h1>Jogue onde o jogo roda melhor.</h1>
+      <p>Uma biblioteca híbrida para WebAssembly, emulação local e streaming de fallback. O navegador detecta capacidades do dispositivo e o StorCloud escolhe o melhor caminho.</p>
+      <div class="status" id="status"><span class="pill">API: verificando…</span></div>
+    </section>
+    <section class="grid" id="games"><article class="card"><div><span class="state">carregando</span><h3>Catálogo</h3><p class="meta">Buscando jogos da API…</p></div></article></section>
+  </main>
+<script>
+const api='/api';
+async function load(){
+  const status=document.getElementById('status');
+  const grid=document.getElementById('games');
+  const webgpu=!!navigator.gpu;
+  const wasm=typeof WebAssembly==='object';
+  try{
+    const [health,games]=await Promise.all([fetch(api+'/healthz').then(r=>r.json()),fetch(api+'/games').then(r=>r.json())]);
+    status.innerHTML=`<span class="pill">API: ${health.ok?'online':'erro'}</span><span class="pill">WebAssembly: ${wasm?'sim':'não'}</span><span class="pill">WebGPU: ${webgpu?'sim':'não'}</span>`;
+    grid.innerHTML=games.items.map(g=>`<article class="card"><div><span class="state">${g.status}</span><h3>${g.name}</h3><p class="meta">Modo: ${g.type}<br>Engine: ${g.engine}</p></div><button class="btn" ${g.status!=='ready'?'disabled':''}>${g.status==='ready'?'Jogar agora':'Em preparação'}</button></article>`).join('');
+  }catch(e){status.innerHTML='<span class="pill error">API indisponível</span>';grid.innerHTML='<article class="card"><div><span class="state error">erro</span><h3>Não foi possível carregar o catálogo</h3><p class="meta">Confira os containers e tente novamente.</p></div></article>'}
+}
+load();
+</script>
+</body>
+</html>
