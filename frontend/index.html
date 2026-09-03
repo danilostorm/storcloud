@@ -1,11 +1,102 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>StorCloud</title><style>:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#080b14;color:#f7f8ff}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#18213d 0,#080b14 44%);min-height:100vh}header{padding:24px 5vw;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ffffff14;gap:18px}.brand{font-weight:900;font-size:1.4rem}.headlinks{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.headlinks a{color:#c2c9ff;text-decoration:none}.badge{font-size:.75rem;padding:6px 10px;border:1px solid #6d7fff66;border-radius:999px;color:#b8c0ff}main{padding:48px 5vw;max-width:1400px;margin:auto}.hero{max-width:900px;margin-bottom:34px}.hero h1{font-size:clamp(2.3rem,6vw,5.8rem);line-height:.92;margin:0 0 18px}.hero p,.muted{color:#a8aec4;line-height:1.65}.status{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.pill{background:#ffffff0b;border:1px solid #ffffff14;border-radius:12px;padding:9px 12px;color:#cbd0e5}.section{margin-top:34px}.section h2{font-size:1.45rem;margin:0 0 14px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}.card{min-height:240px;background:linear-gradient(145deg,#141a2c,#0e1220);border:1px solid #ffffff14;border-radius:18px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 18px 60px #0005}.card.compact{min-height:165px}.card h3{margin:8px 0}.meta{color:#8991ac;font-size:.88rem;line-height:1.55}.description{color:#b4b9cc;font-size:.9rem;line-height:1.5;margin-top:10px}.state{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#9aa6ff}.ready{color:#7fffc4}.alpha{color:#ffd27a}.btn{display:block;text-align:center;text-decoration:none;margin-top:16px;border:0;border-radius:11px;padding:11px 13px;font-weight:800;background:#6675ff;color:#fff}.btn.disabled{opacity:.4;pointer-events:none}.note{margin-top:34px;padding:18px;border-radius:16px;background:#ffffff08;border:1px solid #ffffff10;color:#aeb5ca;line-height:1.6}.error{color:#ff9f9f}.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}.metric{padding:15px;border:1px solid #ffffff12;background:#ffffff07;border-radius:14px}.metric b{display:block;font-size:1.5rem}.metric small{color:#8f98b4}</style></head><body>
-<header><div class="brand">StorCloud</div><div class="headlinks"><a href="/catalog/">Catálogo Híbrido</a><a href="/library/">Minha Biblioteca</a><a href="/achievements/">Conquistas</a><a href="/account/">Conta</a><a id="adminLink" href="/admin/" hidden>Admin</a><span class="badge">v0.8 Platform</span></div></header><main>
-<section class="hero"><h1>Jogue onde o jogo roda melhor.</h1><p>WebAssembly e Retro usam o hardware do jogador; jogos PC podem usar o Local Agent e a GPU local. O StorCloud centraliza conta, biblioteca, saves, dispositivos, histórico e autorização.</p><div class="status" id="status"><span class="pill">API: verificando…</span></div></section>
-<section id="personal" class="section" hidden><h2>Sua atividade</h2><div id="summary" class="summary"></div><h2 style="margin-top:28px">Continuar jogando</h2><div id="continueGrid" class="grid"></div></section>
-<section class="section"><h2>Modos de execução</h2><div class="grid" id="games"><article class="card"><div><span class="state">carregando</span><h3>Catálogo</h3><p class="meta">Buscando modos da API…</p></div></article></div></section>
-<div class="note">Browser WASM, Retro WASM e PC Local usam CPU/GPU do jogador. Streaming remoto continua sendo fallback para títulos sem rota local viável.</div></main>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>StorCloud Play</title>
+  <link rel="stylesheet" href="/assets/storcloud.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand-mark" href="/" aria-label="StorCloud">S</a>
+    <nav class="side-nav">
+      <a class="side-link active" href="/"><span class="ico">⌂</span><span>Início</span></a>
+      <a class="side-link" href="/catalog/"><span class="ico">◫</span><span>Explorar</span></a>
+      <a class="side-link" href="/library/"><span class="ico">▦</span><span>Biblioteca</span></a>
+      <a class="side-link" href="/pc/"><span class="ico">▣</span><span>PC</span></a>
+      <a class="side-link" href="/achievements/"><span class="ico">◆</span><span>Conquistas</span></a>
+    </nav>
+    <div class="sidebar-bottom"><a class="side-link" href="/account/"><span class="ico">●</span><span>Conta</span></a></div>
+  </aside>
+
+  <div class="content">
+    <header class="topbar">
+      <div class="page-title">STORCLOUD PLAY</div>
+      <div class="searchbox"><span>⌕</span><input id="search" placeholder="Buscar jogos" autocomplete="off"></div>
+      <div class="top-spacer"></div>
+      <span id="apiDot" class="status-dot"></span>
+      <a id="profile" class="profile-link" href="/account/">Conta</a>
+    </header>
+
+    <main class="main">
+      <section class="hero-game">
+        <div class="hero-copy">
+          <div class="eyebrow">LOCAL FIRST · CLOUD CONTROL</div>
+          <h1>Sua central de jogos.</h1>
+          <p>Retro, WebAssembly e jogos de PC em uma única biblioteca. O StorCloud escolhe a melhor rota e mantém o processamento no seu hardware sempre que possível.</p>
+          <div class="hero-actions">
+            <a class="btn" href="/catalog/">▶ Explorar jogos</a>
+            <a class="btn secondary" href="/library/">Minha biblioteca</a>
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat"><b id="statGames">—</b><small>Jogos / rotas</small></div>
+          <div class="hero-stat"><b id="statHours">—</b><small>Horas jogadas</small></div>
+          <div class="hero-stat"><b>WASM</b><small id="wasmText">detectando</small></div>
+          <div class="hero-stat"><b>API</b><small id="apiText">conectando</small></div>
+        </div>
+      </section>
+
+      <section id="continueSection" class="section" hidden>
+        <div class="section-head"><div><h2>Continuar jogando</h2><p>Volte exatamente para os seus últimos jogos.</p></div></div>
+        <div id="continueGrid" class="game-row"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div><h2>Destaques</h2><p>Escolha o jogo; o StorCloud cuida da engine por trás.</p></div><a href="/catalog/">Ver catálogo completo →</a></div>
+        <div id="featured" class="game-row"><div class="empty-state">Carregando sua central de jogos…</div></div>
+      </section>
+
+      <section id="activitySection" class="section" hidden>
+        <div class="section-head"><div><h2>Sua atividade</h2><p>Histórico sincronizado da sua conta.</p></div></div>
+        <div class="metric-strip" id="metrics"></div>
+      </section>
+    </main>
+  </div>
+</div>
 <script>
-const api='/api',labels={ready:'pronto',installing:'instalando',alpha:'alpha',planned:'planejado',research:'pesquisa','active-track':'em desenvolvimento',fallback:'fallback'};const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));function fmt(sec){sec=Number(sec||0);const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);return h?`${h}h ${m}m`:`${m}m`}async function load(){const status=document.getElementById('status'),grid=document.getElementById('games'),webgpu=!!navigator.gpu,wasm=typeof WebAssembly==='object';try{const [health,games]=await Promise.all([fetch(api+'/healthz').then(r=>r.json()),fetch(api+'/games').then(r=>r.json())]);status.innerHTML=`<span class="pill">API: ${health.ok?'online':'erro'}</span><span class="pill">Banco: ${health.database||'n/d'}</span><span class="pill">WebAssembly: ${wasm?'sim':'não'}</span><span class="pill">WebGPU: ${webgpu?'sim':'não'}</span><span class="pill">Local-first</span>`;grid.innerHTML=games.items.map(g=>{const openable=!!g.launch_url&&['ready','alpha'].includes(g.status),klass=g.status==='ready'?'ready':(g.status==='alpha'?'alpha':'');return `<article class="card"><div><span class="state ${klass}">${labels[g.status]||g.status}</span><h3>${esc(g.name)}</h3><p class="meta">Modo: ${esc(g.type)}<br>Engine: ${esc(g.engine)}<br>Renderização: ${esc(g.rendering)}</p><p class="description">${esc(g.description||'')}</p></div><a class="btn ${openable?'':'disabled'}" href="${openable?g.launch_url:'#'}">${openable?'Abrir':'Em preparação'}</a></article>`}).join('');await loadPersonal()}catch(e){status.innerHTML='<span class="pill error">API indisponível</span>'}}
-async function loadPersonal(){const me=await fetch(api+'/auth/me');if(!me.ok)return;const user=(await me.json()).user;if(user.role==='admin')document.getElementById('adminLink').hidden=false;const [sum,cont]=await Promise.all([fetch(api+'/activity/summary').then(r=>r.json()),fetch(api+'/activity/continue').then(r=>r.json())]);document.getElementById('personal').hidden=false;document.getElementById('summary').innerHTML=`<div class="metric"><b>${sum.total_hours}h</b><small>Playtime</small></div><div class="metric"><b>${sum.sessions}</b><small>Sessões</small></div><div class="metric"><b>${sum.distinct_games}</b><small>Jogos</small></div>`;document.getElementById('continueGrid').innerHTML=cont.items.length?cont.items.map(x=>`<article class="card compact"><div><span class="state">${esc(x.mode)}</span><h3>${esc(x.title)}</h3><p class="meta">${x.platform_id?esc(x.platform_id)+' · ':''}${fmt(x.duration_seconds)}<br>Último acesso: ${new Date(x.last_seen_at).toLocaleString()}</p></div><a class="btn" href="${x.launch_url}">Continuar</a></article>`).join(''):'<p class="muted">Seu histórico aparecerá aqui depois da primeira sessão.</p>'}load();
-</script></body></html>
+const api='/api';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const art=id=>id.includes('doom')?'art-doom':id.includes('retro')?'art-retro':id.includes('pc-local')?'art-pc':id.includes('quake')?'art-quake':'art-default';
+const symbol=id=>id.includes('doom')?'DOOM':id.includes('retro')?'8BIT':id.includes('pc-local')?'PC':id.includes('quake')?'Q':'PLAY';
+const fmt=s=>{s=Number(s||0);const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?`${h}h ${m}m`:`${m}m`};
+function card(g,launch){
+  const enabled=!!launch&&g.status!=='planned';
+  return `<a class="game-card" href="${enabled?esc(launch):'#'}" ${enabled?'':'onclick="return false"'} data-title="${esc((g.title||'').toLowerCase())}"><div class="game-art ${art(g.id)}"><span class="game-symbol">${symbol(g.id)}</span><span class="game-badge">${esc(g.category||'game')}</span></div><div class="game-info"><h3>${esc(g.title)}</h3><p>${esc(g.description||'')}</p><span class="route-pill ${enabled?'':'off'}">${enabled?'Pronto para jogar':'Em preparação'}</span></div></a>`;
+}
+async function boot(){
+  const dot=document.getElementById('apiDot');
+  const wasm=typeof WebAssembly==='object';document.getElementById('wasmText').textContent=wasm?'disponível':'indisponível';
+  try{
+    const [health,catalog]=await Promise.all([
+      fetch(api+'/healthz',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('health '+r.status);return r.json()}),
+      fetch(api+'/catalog',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('catalog '+r.status);return r.json()})
+    ]);
+    dot.classList.add('ok');document.getElementById('apiText').textContent='online';document.getElementById('statGames').textContent=catalog.count;
+    document.getElementById('featured').innerHTML=catalog.items.map(g=>{const route=(g.routes||[]).find(x=>x.launch_url);return card(g,route?.launch_url)}).join('');
+  }catch(e){
+    console.error(e);dot.classList.add('err');document.getElementById('apiText').textContent='proxy offline';document.getElementById('featured').innerHTML='<div class="empty-state">Não foi possível alcançar a API pelo launcher. Atualize o StorCloud ou confira o proxy Nginx.</div>';
+  }
+  try{
+    const me=await fetch(api+'/auth/me',{cache:'no-store'});if(!me.ok)return;const user=(await me.json()).user;document.getElementById('profile').textContent=user.username;
+    const [summary,cont]=await Promise.all([fetch(api+'/activity/summary').then(r=>r.json()),fetch(api+'/activity/continue').then(r=>r.json())]);
+    document.getElementById('statHours').textContent=(summary.total_hours||0)+'h';document.getElementById('activitySection').hidden=false;
+    document.getElementById('metrics').innerHTML=`<div class="metric-card"><b>${summary.total_hours||0}h</b><span>Playtime total</span></div><div class="metric-card"><b>${summary.sessions||0}</b><span>Sessões</span></div><div class="metric-card"><b>${summary.distinct_games||0}</b><span>Jogos diferentes</span></div><div class="metric-card"><b>${user.role==='admin'?'ADMIN':'PLAYER'}</b><span>Perfil</span></div>`;
+    if(cont.items?.length){document.getElementById('continueSection').hidden=false;document.getElementById('continueGrid').innerHTML=cont.items.slice(0,4).map(x=>card({id:x.game_key,title:x.title,category:x.platform_id||x.mode,description:`Última sessão · ${fmt(x.duration_seconds)}`},x.launch_url)).join('')}
+    if(user.role==='admin')document.querySelector('.sidebar-bottom').insertAdjacentHTML('beforebegin','<a class="side-link" href="/admin/"><span class="ico">⚙</span><span>Admin</span></a>');
+  }catch(e){console.debug('guest mode',e)}
+}
+document.getElementById('search').addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll('.game-card').forEach(c=>c.style.display=!q||c.dataset.title.includes(q)?'':'none')});
+boot();
+</script>
+</body></html>
