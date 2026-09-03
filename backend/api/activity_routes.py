@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from activity_models import PlaySession
@@ -28,7 +28,10 @@ class StartSessionBody(BaseModel):
 
 
 def session_dict(row: PlaySession) -> dict:
-    active = row.ended_at is None and row.last_seen_at >= utcnow() - timedelta(minutes=2)
+    last_seen = row.last_seen_at
+    if last_seen.tzinfo is None:
+        last_seen = last_seen.replace(tzinfo=timezone.utc)
+    active = row.ended_at is None and last_seen >= utcnow() - timedelta(minutes=2)
     return {
         "id": row.id,
         "mode": row.mode,
@@ -49,6 +52,18 @@ def calculate_duration(row: PlaySession, end: datetime) -> int:
     if start.tzinfo is None:
         start = start.replace(tzinfo=timezone.utc)
     return max(0, int((end - start).total_seconds()))
+
+
+def deep_link(row: PlaySession) -> str:
+    if row.mode == "retro-wasm" and row.game_key.startswith("rom-"):
+        return f"/retro/?rom={row.game_key[4:]}"
+    if row.mode == "local-native":
+        return "/pc/"
+    if row.mode == "browser-wasm":
+        if row.game_key == "doom-wasm":
+            return "/games/doom-wasm/"
+        return "/"
+    return "/"
 
 
 @router.post("/start")
@@ -108,3 +123,42 @@ def recent_sessions(user: User = Depends(get_current_user), db: Session = Depend
         .limit(50)
     ).all()
     return {"items": [session_dict(row) for row in rows], "count": len(rows)}
+
+
+@router.get("/summary")
+def activity_summary(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    session_count = db.scalar(select(func.count(PlaySession.id)).where(PlaySession.user_id == user.id)) or 0
+    total_seconds = db.scalar(
+        select(func.coalesce(func.sum(PlaySession.duration_seconds), 0)).where(PlaySession.user_id == user.id)
+    ) or 0
+    distinct_games = db.scalar(
+        select(func.count(func.distinct(PlaySession.game_key))).where(PlaySession.user_id == user.id)
+    ) or 0
+    return {
+        "sessions": int(session_count),
+        "total_seconds": int(total_seconds),
+        "total_hours": round(int(total_seconds) / 3600, 1),
+        "distinct_games": int(distinct_games),
+    }
+
+
+@router.get("/continue")
+def continue_playing(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rows = db.scalars(
+        select(PlaySession)
+        .where(PlaySession.user_id == user.id)
+        .order_by(PlaySession.last_seen_at.desc())
+        .limit(100)
+    ).all()
+    seen: set[str] = set()
+    items = []
+    for row in rows:
+        if row.game_key in seen:
+            continue
+        seen.add(row.game_key)
+        item = session_dict(row)
+        item["launch_url"] = deep_link(row)
+        items.append(item)
+        if len(items) >= 12:
+            break
+    return {"items": items, "count": len(items)}
