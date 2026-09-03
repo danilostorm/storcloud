@@ -1,0 +1,13 @@
+[package]
+name = "storcloud-local-agent"
+version = "0.1.0"
+edition = "2021"
+description = "Local companion for StorCloud PC game execution"
+license = "MIT"
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tower-http = { version = "0.6", features = ["cors"] }
