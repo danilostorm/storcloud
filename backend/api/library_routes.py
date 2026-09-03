@@ -1,6 +1,7 @@
 import hashlib
 import os
 import re
+import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,11 +14,13 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import RomEntry, User, UserSession
+from retro_metadata_models import RomMetadata
 from security import token_hash
 
 router = APIRouter(prefix="/library", tags=["library"])
 SESSION_COOKIE = "storcloud_session"
 ROM_ROOT = Path(os.getenv("STORCLOUD_ROM_ROOT", "/storage/roms"))
+MEDIA_ROOT = Path(os.getenv("STORCLOUD_MEDIA_ROOT", "/storage/media"))
 MAX_ROM_BYTES = int(os.getenv("STORCLOUD_MAX_ROM_BYTES", str(2 * 1024 * 1024 * 1024)))
 SAFE_PLATFORM = re.compile(r"^[a-z0-9_-]{1,40}$")
 
@@ -52,7 +55,7 @@ def current_user(request: Request, db: Session = Depends(get_db)) -> User:
     return user
 
 
-def rom_dict(row: RomEntry) -> dict:
+def rom_dict(row: RomEntry, metadata: RomMetadata | None = None) -> dict:
     return {
         "id": row.id,
         "title": row.title,
@@ -64,6 +67,11 @@ def rom_dict(row: RomEntry) -> dict:
         "created_at": row.created_at,
         "last_played_at": row.last_played_at,
         "file_url": f"/api/library/roms/{row.id}/file",
+        "cover_url": f"/api/library/roms/{row.id}/cover" if metadata and metadata.cover_path else None,
+        "background_url": f"/api/library/roms/{row.id}/background" if metadata and metadata.background_path else None,
+        "metadata_source": metadata.source if metadata else None,
+        "matched_name": metadata.matched_name if metadata else None,
+        "scanned_at": metadata.scanned_at if metadata else None,
     }
 
 
@@ -74,7 +82,9 @@ def list_roms(user: User = Depends(current_user), db: Session = Depends(get_db))
         .where(RomEntry.user_id == user.id)
         .order_by(RomEntry.favorite.desc(), RomEntry.last_played_at.desc().nullslast(), RomEntry.title.asc())
     ).all()
-    return {"items": [rom_dict(row) for row in rows], "count": len(rows)}
+    metadata_rows = db.scalars(select(RomMetadata).where(RomMetadata.rom_id.in_([row.id for row in rows]))).all() if rows else []
+    metadata_map = {item.rom_id: item for item in metadata_rows}
+    return {"items": [rom_dict(row, metadata_map.get(row.id)) for row in rows], "count": len(rows)}
 
 
 @router.post("/roms")
@@ -137,7 +147,7 @@ async def upload_rom(
         target.unlink(missing_ok=True)
         raise HTTPException(status_code=409, detail="this ROM already exists in your library")
     db.refresh(row)
-    return {"item": rom_dict(row)}
+    return {"item": rom_dict(row), "auto_scan_url": f"/api/library/roms/{row.id}/scan"}
 
 
 @router.get("/roms/{rom_id}/file")
@@ -177,6 +187,9 @@ def delete_rom(rom_id: str, user: User = Depends(current_user), db: Session = De
     if not row or row.user_id != user.id:
         raise HTTPException(status_code=404, detail="ROM not found")
     Path(row.storage_path).unlink(missing_ok=True)
+    media_dir = MEDIA_ROOT / str(user.id) / rom_id
+    if media_dir.exists():
+        shutil.rmtree(media_dir, ignore_errors=True)
     db.delete(row)
     db.commit()
     return {"ok": True}
