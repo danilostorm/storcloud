@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Node
+node_modules/
+dist/
+
+# Rust
+**/target/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Local Agent private configuration
+local-agent/config/games.json
+local-agent/config/device.json
+
+# Runtime storage
+storage/*
+!storage/.gitkeep
+runtime/*
+!runtime/.gitkeep
+backups/
+
+# Generated approved UI atlas (rebuilt by update.sh from tracked chunks)
+frontend/assets/mockups/atlas.avif
+frontend/assets/mockups/atlas.avif.tmp
+
+# Game payloads / ROMs / proprietary assets
+games/**/assets/
+games/**/roms/
+*.rom
+*.iso
+*.bin
+*.cue
+*.wad
+*.pak
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store

@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+echo "[StorCloud] Pulling latest code..."
+git pull --ff-only
+
+echo "[StorCloud] Rebuilding approved pixel-reference UI atlas..."
+mkdir -p frontend/assets/mockups
+atlas_tmp="frontend/assets/mockups/atlas.webp.tmp"
+cat frontend/assets/mockup-src/atlas.* | tr -d '\r\n' | base64 -d > "$atlas_tmp"
+atlas_sha="$(sha256sum "$atlas_tmp" | awk '{print $1}')"
+if [ "$atlas_sha" != "a36fff6ef111dc92624cb0237a122dbdf0e0d741669f5d4913603dc5f6225cdb" ]; then
+  echo "[StorCloud] ERROR: approved UI atlas checksum mismatch: $atlas_sha"
+  rm -f "$atlas_tmp"
+  exit 1
+fi
+mv "$atlas_tmp" frontend/assets/mockups/atlas.webp
+echo "[StorCloud] Pixel-reference atlas ready ($(du -h frontend/assets/mockups/atlas.webp | awk '{print $1}'))."
+
+echo "[StorCloud] Preparing persistent environment..."
+bash scripts/bootstrap-env.sh
+
+echo "[StorCloud] Cleaning legacy separate retro engines..."
+bash scripts/cleanup-legacy-retro.sh
+
+echo "[StorCloud] Preparing local browser games..."
+bash scripts/bootstrap-games.sh
+
+echo "[StorCloud] Unified Retro player + hybrid execution catalog enabled."
+
+echo "[StorCloud] Building and starting services..."
+docker compose up -d --build --remove-orphans
+
+echo "[StorCloud] Waiting for API + database readiness..."
+api_ready=0
+for attempt in $(seq 1 45); do
+  if curl -fsS --max-time 3 http://127.0.0.1:8000/healthz >/tmp/storcloud-health.json 2>/dev/null; then
+    api_ready=1
+    break
+  fi
+  sleep 1
+done
+
+if [ "$api_ready" -eq 1 ]; then
+  echo "[StorCloud] API + database online."
+  cat /tmp/storcloud-health.json || true
+  echo
+else
+  echo "[StorCloud] ERROR: API did not become ready."
+  docker compose logs --tail=80 api || true
+  docker compose logs --tail=40 db || true
+  rm -f /tmp/storcloud-health.json
+  exit 1
+fi
+rm -f /tmp/storcloud-health.json
+
+echo "[StorCloud] Reloading web gateway..."
+docker compose restart web >/dev/null
+
+web_ready=0
+for attempt in $(seq 1 20); do
+  if curl -fsS --max-time 3 http://127.0.0.1:8080/api/healthz >/tmp/storcloud-web-health.json 2>/dev/null; then
+    web_ready=1
+    break
+  fi
+  sleep 1
+done
+
+if [ "$web_ready" -eq 1 ]; then
+  echo "[StorCloud] Web gateway -> API online."
+  cat /tmp/storcloud-web-health.json || true
+  echo
+else
+  echo "[StorCloud] ERROR: web gateway cannot reach API."
+  docker compose logs --tail=80 web api || true
+  rm -f /tmp/storcloud-web-health.json
+  exit 1
+fi
+rm -f /tmp/storcloud-web-health.json
+
+echo "[StorCloud] Checking approved UI atlas through web gateway..."
+if curl -fsS --max-time 5 http://127.0.0.1:8080/assets/mockups/atlas.webp >/tmp/storcloud-atlas-check.webp 2>/dev/null; then
+  served_sha="$(sha256sum /tmp/storcloud-atlas-check.webp | awk '{print $1}')"
+  rm -f /tmp/storcloud-atlas-check.webp
+  if [ "$served_sha" != "a36fff6ef111dc92624cb0237a122dbdf0e0d741669f5d4913603dc5f6225cdb" ]; then
+    echo "[StorCloud] ERROR: web gateway served the wrong UI atlas."
+    exit 1
+  fi
+  echo "[StorCloud] Approved UI atlas online."
+else
+  echo "[StorCloud] ERROR: approved UI atlas unavailable through web gateway."
+  docker compose logs --tail=80 web || true
+  exit 1
+fi
+
+echo "[StorCloud] Checking hybrid catalog through web gateway..."
+if curl -fsS --max-time 5 http://127.0.0.1:8080/api/catalog >/tmp/storcloud-catalog.json 2>/dev/null; then
+  echo "[StorCloud] Hybrid catalog online through Nginx."
+else
+  echo "[StorCloud] ERROR: hybrid catalog unavailable through web gateway."
+  docker compose logs --tail=80 web api || true
+  rm -f /tmp/storcloud-catalog.json
+  exit 1
+fi
+rm -f /tmp/storcloud-catalog.json
+
+echo "[StorCloud] Services:"
+docker compose ps
+
+echo "[StorCloud] Done. Pixel-reference UI v1 active."
+echo "  Home:         :8080/"
+echo "  Catalog:      :8080/catalog/"
+echo "  Library:      :8080/library/"
+echo "  Retro:        :8080/retro/"
+echo "  PC Local:     :8080/pc/"
+echo "  Achievements: :8080/achievements/"
+echo "  Account:      :8080/account/"
+echo "  Admin:        :8080/admin/"
+echo "  Streaming:    :8080/stream/"
+echo "  API docs:     :8000/docs"

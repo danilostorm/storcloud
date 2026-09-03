@@ -1,0 +1,85 @@
+name: Web CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'update.sh'
+      - '.github/workflows/web-ci.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'update.sh'
+      - '.github/workflows/web-ci.yml'
+
+jobs:
+  web-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Rebuild and verify approved mockup atlas
+        run: |
+          mkdir -p frontend/assets/mockups
+          cat frontend/assets/mockup-src/atlas.* | tr -d '\r\n' | base64 -d > frontend/assets/mockups/atlas.webp
+          test "$(stat -c%s frontend/assets/mockups/atlas.webp)" -eq 1699024
+          echo 'a36fff6ef111dc92624cb0237a122dbdf0e0d741669f5d4913603dc5f6225cdb  frontend/assets/mockups/atlas.webp' | sha256sum -c -
+      - name: Validate Nginx configuration
+        run: |
+          docker run --rm -v "$PWD/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:1.27-alpine nginx -t
+      - name: Validate pixel-reference pages and assets
+        run: |
+          test -f frontend/assets/pixel-shell.css
+          test -f frontend/assets/pixel-shell.js
+          test -f frontend/assets/mockup-src/atlas.000
+          test -f frontend/assets/mockup-src/atlas.050
+          for page in \
+            frontend/index.html \
+            frontend/catalog/index.html \
+            frontend/library/index.html \
+            frontend/retro/index.html \
+            frontend/pc/index.html \
+            frontend/achievements/index.html \
+            frontend/account/index.html \
+            frontend/admin/index.html; do
+              grep -q 'pixel-shell.css' "$page"
+              grep -q 'pixel-stage' "$page"
+          done
+          grep -q 'frame-0' frontend/index.html
+          grep -q 'frame-1' frontend/catalog/index.html
+          grep -q 'frame-2' frontend/library/index.html
+          grep -q 'frame-3' frontend/retro/index.html
+          grep -q 'frame-4' frontend/pc/index.html
+          grep -q 'frame-5' frontend/achievements/index.html
+          grep -q 'frame-6' frontend/account/index.html
+          grep -q 'frame-7' frontend/admin/index.html
+      - name: Validate JavaScript syntax
+        run: |
+          node --check frontend/assets/pixel-shell.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, subprocess
+          pages = [
+              Path('frontend/index.html'), Path('frontend/catalog/index.html'), Path('frontend/library/index.html'),
+              Path('frontend/retro/index.html'), Path('frontend/pc/index.html'), Path('frontend/achievements/index.html'),
+              Path('frontend/account/index.html'), Path('frontend/admin/index.html'),
+          ]
+          for page in pages:
+              html = page.read_text(encoding='utf-8')
+              blocks = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', html, flags=re.S | re.I)
+              for index, code in enumerate(blocks):
+                  if not code.strip():
+                      continue
+                  code = re.sub(r'^\s*import\s*\{?.+?\}?\s*from\s*[\'\"].+?[\'\"];?\s*', '', code, count=1, flags=re.S)
+                  target = Path('/tmp') / f'{page.parent.name or "home"}-{index}.js'
+                  target.write_text(code, encoding='utf-8')
+                  subprocess.run(['node', '--check', str(target)], check=True)
+          PY
+      - name: Validate updater owns generated atlas lifecycle
+        run: |
+          grep -q 'Rebuilding approved pixel-reference UI atlas' update.sh
+          grep -q 'a36fff6ef111dc92624cb0237a122dbdf0e0d741669f5d4913603dc5f6225cdb' update.sh
+          grep -q 'frontend/assets/mockups/atlas.webp' .gitignore
