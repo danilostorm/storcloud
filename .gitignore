@@ -18,12 +18,14 @@ dist/
 
 # Local Agent private configuration
 local-agent/config/games.json
+local-agent/config/device.json
 
 # Runtime storage
 storage/*
 !storage/.gitkeep
 runtime/*
 !runtime/.gitkeep
+backups/
 
 # Game payloads / ROMs / proprietary assets
 games/**/assets/
