@@ -9,24 +9,49 @@ username="${1:-}"
 echo "StorCloud Admin Recovery"
 echo "========================"
 
-echo "Current users:"
-docker compose exec -T api python - <<'PY'
+if [ -z "$username" ]; then
+  readarray -t rows < <(docker compose exec -T api python - <<'PY'
 from database import SessionLocal
 from models import User
 from sqlalchemy import select
 with SessionLocal() as db:
-    users=db.scalars(select(User).order_by(User.id)).all()
-    if not users:
-        print("  (no users)")
-    for u in users:
-        print(f"  {u.id}: {u.username} [{u.role}] active={u.is_active}")
+    for u in db.scalars(select(User).order_by(User.id)).all():
+        print(f"{u.username}|{u.role}|{1 if u.is_active else 0}")
 PY
+)
 
-if [ -z "$username" ]; then
-  echo
-  echo "Usage: bash scripts/admin-recovery.sh USERNAME"
-  echo "This command runs locally on the StorCloud VM and promotes that existing account."
-  exit 0
+  if [ "${#rows[@]}" -eq 0 ]; then
+    echo "No users exist yet. Create the first account from /account/ using the setup token."
+    exit 1
+  fi
+
+  echo "Current users:"
+  for row in "${rows[@]}"; do
+    IFS='|' read -r name role active <<<"$row"
+    echo "  $name [$role] active=$active"
+  done
+
+  admins=0
+  for row in "${rows[@]}"; do
+    IFS='|' read -r _ role _ <<<"$row"
+    [ "$role" = "admin" ] && admins=$((admins+1))
+  done
+
+  if [ "$admins" -gt 0 ]; then
+    echo "An administrator already exists. Pass a username explicitly only if you intentionally want another admin:"
+    echo "  bash scripts/admin-recovery.sh USERNAME"
+    exit 0
+  fi
+
+  if [ "${#rows[@]}" -eq 1 ]; then
+    IFS='|' read -r username _ _ <<<"${rows[0]}"
+    echo "No admin exists and there is only one account. Promoting: $username"
+  else
+    echo
+    echo "No administrator exists, but there are multiple accounts. Choose one explicitly:"
+    echo "  bash scripts/admin-recovery.sh USERNAME"
+    exit 0
+  fi
 fi
 
 docker compose exec -T api python - "$username" <<'PY'
@@ -46,4 +71,4 @@ with SessionLocal() as db:
     print(f"Promoted {user.username} to admin.")
 PY
 
-echo "Done. Log out and log back in if the browser still shows the old role."
+echo "Done. Refresh /account/; log out and back in only if your browser cached the old role."
