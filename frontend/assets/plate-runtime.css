@@ -1,0 +1,12 @@
+body{--plate-y:0px}
+body[data-page="home"]{--plate-y:0px}
+body[data-page="catalog"]{--plate-y:-941px}
+body[data-page="library"]{--plate-y:-1882px}
+body[data-page="retro"]{--plate-y:-2823px}
+body[data-page="pc"]{--plate-y:-3764px}
+body[data-page="achievements"]{--plate-y:-4705px}
+body[data-page="account"]{--plate-y:-5646px}
+body[data-page="admin"]{--plate-y:-6587px}
+.plate{background-image:url('/assets/mockups/storcloud-plates.avif')!important;background-repeat:no-repeat!important;background-size:1672px 7528px!important;background-position:0 var(--plate-y)!important}
+.ambient{inset:auto!important;left:50%!important;top:50%!important;width:1672px!important;height:941px!important;background-image:url('/assets/mockups/storcloud-plates.avif')!important;background-repeat:no-repeat!important;background-size:1672px 7528px!important;background-position:0 var(--plate-y)!important;transform:translate(-50%,-50%) scale(1.45)!important;filter:blur(34px) brightness(.34) saturate(1.25)!important;opacity:.9!important}
+@media (max-aspect-ratio:1672/941){.ambient{transform:translate(-50%,-50%) scale(1.65)!important}}
