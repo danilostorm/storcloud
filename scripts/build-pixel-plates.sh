@@ -16,7 +16,7 @@ fi
 : > "$TMP"
 for part in "${parts[@]}"; do
   clean="${part}.clean.$$"
-  tr -d '\r\n\t ' < "$part" > "$clean"
+  sed 's#data:image/avif;base64,##g' "$part" | tr -d '\r\n\t ' > "$clean"
   if ! base64 --decode "$clean" >> "$TMP"; then
     rm -f "$clean" "$TMP"
     echo "[StorCloud] ERROR: invalid pixel-plate chunk: $(basename "$part")" >&2
