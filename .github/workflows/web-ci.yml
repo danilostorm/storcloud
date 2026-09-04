@@ -5,13 +5,11 @@ on:
     branches: [main, pixel-plates-release]
     paths:
       - 'frontend/**'
-      - 'scripts/build-pixel-plates.sh'
       - 'update.sh'
       - '.github/workflows/web-ci.yml'
   pull_request:
     paths:
       - 'frontend/**'
-      - 'scripts/build-pixel-plates.sh'
       - 'update.sh'
       - '.github/workflows/web-ci.yml'
 
@@ -24,13 +22,14 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Reconstruct approved pixel atlas
+      - name: Validate approved pixel plates
         run: |
-          bash scripts/build-pixel-plates.sh
-          test -s frontend/assets/mockups/storcloud-plates.avif
-          test "$(stat -c%s frontend/assets/mockups/storcloud-plates.avif)" -gt 50000
-          grep -a -q 'ftypavif' frontend/assets/mockups/storcloud-plates.avif
-          file frontend/assets/mockups/storcloud-plates.avif
+          set -euo pipefail
+          for f in home catalog library retro pc achievements account admin; do
+            test -s "frontend/assets/mockups/${f}.jpg"
+            test "$(stat -c%s "frontend/assets/mockups/${f}.jpg")" -gt 1000
+            file "frontend/assets/mockups/${f}.jpg"
+          done
 
       - name: Validate Nginx configuration
         run: |
@@ -61,10 +60,20 @@ jobs:
               assert f'data-page="{name}"' in html, page
               assert 'id="live"' in html, page
               assert 'class="plate"' in html, page
-              assert '.jpg' not in html, page
           css = Path('frontend/assets/plate-runtime.css').read_text(encoding='utf-8')
-          assert 'storcloud-plates.avif' in css
-          for y in (0, -941, -1882, -2823, -3764, -4705, -5646, -6587):
-              assert f'{y}px' in css
-          print('8 approved 1672x941 pixel plates wired correctly')
+          expected = {
+              'home': 'home.jpg',
+              'catalog': 'catalog.jpg',
+              'library': 'library.jpg',
+              'retro': 'retro.jpg',
+              'pc': 'pc.jpg',
+              'achievements': 'achievements.jpg',
+              'account': 'account.jpg',
+              'admin': 'admin.jpg',
+          }
+          for page, filename in expected.items():
+              assert f'body[data-page="{page}"]' in css
+              assert filename in css
+          assert 'storcloud-plates.avif' not in css
+          print('8 approved pixel plates wired directly and validated')
           PY
