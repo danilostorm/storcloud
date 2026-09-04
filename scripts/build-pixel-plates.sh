@@ -13,7 +13,17 @@ if [ "${#parts[@]}" -ne 6 ]; then
   exit 1
 fi
 
-cat "${parts[@]}" | tr -d '\r\n' | base64 --decode > "$TMP"
+: > "$TMP"
+for part in "${parts[@]}"; do
+  clean="${part}.clean.$$"
+  tr -d '\r\n\t ' < "$part" > "$clean"
+  if ! base64 --decode "$clean" >> "$TMP"; then
+    rm -f "$clean" "$TMP"
+    echo "[StorCloud] ERROR: invalid pixel-plate chunk: $(basename "$part")" >&2
+    exit 1
+  fi
+  rm -f "$clean"
+done
 
 if [ ! -s "$TMP" ]; then
   echo "[StorCloud] ERROR: reconstructed pixel atlas is empty." >&2
