@@ -27,6 +27,9 @@ runtime/*
 !runtime/.gitkeep
 backups/
 
+# Generated visual runtime assets
+frontend/assets/mockups/storcloud-plates.avif
+
 # Game payloads / ROMs / proprietary assets
 games/**/assets/
 games/**/roms/
