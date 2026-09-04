@@ -5,11 +5,13 @@ on:
     branches: [main, pixel-plates-release]
     paths:
       - 'frontend/**'
+      - 'scripts/build-pixel-plates.sh'
       - 'update.sh'
       - '.github/workflows/web-ci.yml'
   pull_request:
     paths:
       - 'frontend/**'
+      - 'scripts/build-pixel-plates.sh'
       - 'update.sh'
       - '.github/workflows/web-ci.yml'
 
@@ -21,41 +23,48 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Reconstruct approved pixel atlas
+        run: |
+          bash scripts/build-pixel-plates.sh
+          test -s frontend/assets/mockups/storcloud-plates.avif
+          test "$(stat -c%s frontend/assets/mockups/storcloud-plates.avif)" -gt 50000
+          grep -a -q 'ftypavif' frontend/assets/mockups/storcloud-plates.avif
+          file frontend/assets/mockups/storcloud-plates.avif
+
       - name: Validate Nginx configuration
         run: |
           docker run --rm -v "$PWD/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:1.27-alpine nginx -t
-      - name: Validate approved pixel plates
-        run: |
-          test -s frontend/assets/mockups/home.jpg
-          test -s frontend/assets/mockups/catalog.jpg
-          test -s frontend/assets/mockups/library.jpg
-          test -s frontend/assets/mockups/retro.jpg
-          test -s frontend/assets/mockups/pc.jpg
-          test -s frontend/assets/mockups/achievements.jpg
-          test -s frontend/assets/mockups/account.jpg
-          test -s frontend/assets/mockups/admin.jpg
-          file frontend/assets/mockups/*.jpg | tee /tmp/plates.txt
-          test "$(grep -c 'JPEG image data' /tmp/plates.txt)" -eq 8
+
       - name: Validate pixel UI files
         run: |
           test -s frontend/assets/pixel.css
+          test -s frontend/assets/plate-runtime.css
           node --check frontend/assets/pixel.js
           python3 - <<'PY'
           from pathlib import Path
           pages = {
-              Path('frontend/index.html'): 'home.jpg',
-              Path('frontend/catalog/index.html'): 'catalog.jpg',
-              Path('frontend/library/index.html'): 'library.jpg',
-              Path('frontend/retro/index.html'): 'retro.jpg',
-              Path('frontend/pc/index.html'): 'pc.jpg',
-              Path('frontend/achievements/index.html'): 'achievements.jpg',
-              Path('frontend/account/index.html'): 'account.jpg',
-              Path('frontend/admin/index.html'): 'admin.jpg',
+              Path('frontend/index.html'): 'home',
+              Path('frontend/catalog/index.html'): 'catalog',
+              Path('frontend/library/index.html'): 'library',
+              Path('frontend/retro/index.html'): 'retro',
+              Path('frontend/pc/index.html'): 'pc',
+              Path('frontend/achievements/index.html'): 'achievements',
+              Path('frontend/account/index.html'): 'account',
+              Path('frontend/admin/index.html'): 'admin',
           }
-          for page, plate in pages.items():
+          for page, name in pages.items():
               html = page.read_text(encoding='utf-8')
               assert '/assets/pixel.css' in html, page
+              assert '/assets/plate-runtime.css' in html, page
               assert '/assets/pixel.js' in html, page
-              assert f'/assets/mockups/{plate}' in html, page
+              assert f'data-page="{name}"' in html, page
               assert 'id="live"' in html, page
+              assert 'class="plate"' in html, page
+              assert '.jpg' not in html, page
+          css = Path('frontend/assets/plate-runtime.css').read_text(encoding='utf-8')
+          assert 'storcloud-plates.avif' in css
+          for y in (0, -941, -1882, -2823, -3764, -4705, -5646, -6587):
+              assert f'{y}px' in css
+          print('8 approved 1672x941 pixel plates wired correctly')
           PY
