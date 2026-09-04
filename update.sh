@@ -6,6 +6,9 @@ cd "$(dirname "$0")"
 echo "[StorCloud] Pulling latest code..."
 git pull --ff-only
 
+echo "[StorCloud] Reconstructing approved pixel-perfect visual plates..."
+bash scripts/build-pixel-plates.sh
+
 echo "[StorCloud] Preparing persistent environment..."
 bash scripts/bootstrap-env.sh
 
@@ -44,8 +47,6 @@ fi
 rm -f /tmp/storcloud-health.json
 
 echo "[StorCloud] Reloading web gateway..."
-# Nginx resolves Docker service names at runtime, but a restart also guarantees
-# changed bind-mounted nginx.conf is loaded on every deployment.
 docker compose restart web >/dev/null
 
 web_ready=0
