@@ -6,8 +6,7 @@ cd "$(dirname "$0")"
 echo "[StorCloud] Pulling latest code..."
 git pull --ff-only
 
-echo "[StorCloud] Reconstructing approved pixel-perfect visual plates..."
-bash scripts/build-pixel-plates.sh
+echo "[StorCloud] Using committed approved per-screen pixel plates."
 
 echo "[StorCloud] Preparing persistent environment..."
 bash scripts/bootstrap-env.sh
