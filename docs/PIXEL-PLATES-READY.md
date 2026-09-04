@@ -1,0 +1,1 @@
+Pixel-plate release candidate: eight approved 1672×941 plates, live API overlays, navigation hotspots, Retro Library/player, Local Agent view, achievements, account and admin overlays. Ready for Web CI and merge to main.
